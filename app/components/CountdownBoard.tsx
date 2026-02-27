@@ -17,11 +17,18 @@ export default function CountdownBoard({ startingSquare }: CountdownBoardProps) 
       {Array.from({ length: ROWS }, (_, r) =>
         Array.from({ length: COLS }, (_, c) => {
           const isStart = r === startRow && c === startCol;
+          const isNeighbor = !isStart && Math.abs(r - startRow) <= 1 && Math.abs(c - startCol) <= 1;
           return (
             <div
               key={`${r}-${c}`}
-              className={`w-7 h-7 box-border ${RAISED} ${isStart ? "" : "bg-[#c0c0c0]"}`}
-              style={isStart ? { animation: "pulse-green 0.8s ease-in-out infinite" } : undefined}
+              className={`w-7 h-7 box-border ${RAISED} ${isStart || isNeighbor ? "" : "bg-[#c0c0c0]"}`}
+              style={
+                isStart
+                  ? { animation: "pulse-green 0.8s ease-in-out infinite" }
+                  : isNeighbor
+                    ? { animation: "pulse-green 0.8s ease-in-out infinite", filter: "brightness(0.85) saturate(0.5)" }
+                    : undefined
+              }
             />
           );
         })
