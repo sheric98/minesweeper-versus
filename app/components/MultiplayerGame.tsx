@@ -514,7 +514,13 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               Waiting for game...
             </div>
           )}
-          {cooldownMs > 0 && <CooldownOverlay remainingMs={cooldownMs} />}
+          {cooldownMs > 0 && (
+            <CooldownOverlay
+              remainingMs={cooldownMs}
+              playerPercent={Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)}
+              opponentPercent={Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)}
+            />
+          )}
         </div>
 
         {/* Opponent section — positioned to the right of the player board */}

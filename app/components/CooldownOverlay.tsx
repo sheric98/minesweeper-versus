@@ -1,8 +1,10 @@
 interface CooldownOverlayProps {
   remainingMs: number;
+  playerPercent?: number;
+  opponentPercent?: number;
 }
 
-export default function CooldownOverlay({ remainingMs }: CooldownOverlayProps) {
+export default function CooldownOverlay({ remainingMs, playerPercent, opponentPercent }: CooldownOverlayProps) {
   const seconds = (remainingMs / 1000).toFixed(1);
 
   return (
@@ -10,6 +12,12 @@ export default function CooldownOverlay({ remainingMs }: CooldownOverlayProps) {
       <div className="bg-ms-silver border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0] px-6 py-4 text-center">
         <div className="text-4xl font-bold font-mono text-red-700">{seconds}s</div>
         <div className="text-sm text-ms-dark mt-1">Cooldown</div>
+        {playerPercent != null && opponentPercent != null && (
+          <div className="mt-3 text-sm font-mono space-y-1">
+            <div className="text-blue-600 font-bold">You: {playerPercent}%</div>
+            <div className="text-rose-600 font-bold">Opponent: {opponentPercent}%</div>
+          </div>
+        )}
       </div>
     </div>
   );
