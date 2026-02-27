@@ -547,7 +547,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
       </div>
 
       {/* Progress bars */}
-      {matchState === "playing" && (
+      {(matchState === "playing" || matchState === "finished") && (
         <div className="flex flex-col gap-2 w-full max-w-xl">
           {/* Player progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
