@@ -483,15 +483,16 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
         {connectionState === "disconnected" && "Disconnected"}
       </div>
 
-      {/* Main game area: player board + opponent board side by side */}
-      <div className="flex gap-6 items-start">
-        {/* Player board section */}
+      {/* Main game area: player board centered, opponent board anchored to its right */}
+      <div className="relative">
+        {/* Player board section — centered on screen */}
         <div className="flex flex-col items-center gap-0 relative">
           <Header
             flagsRemaining={flagsRemaining}
             elapsedSeconds={elapsedSeconds}
             phase={headerPhase}
             onReset={() => {}}
+            accentColor="blue"
           />
           {board ? (
             <BoardComponent
@@ -516,9 +517,11 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           {cooldownMs > 0 && <CooldownOverlay remainingMs={cooldownMs} />}
         </div>
 
-        {/* Opponent section */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="text-sm font-bold font-mono">
+        {/* Opponent section — positioned to the right of the player board */}
+        <div className="absolute left-full top-0 ml-6 flex flex-col items-center gap-0">
+          <div
+            className="flex items-center justify-center px-2 py-1.5 border-4 bg-rose-200 border-t-rose-100 border-l-rose-100 border-b-rose-300 border-r-rose-300 text-sm font-bold font-mono w-full"
+          >
             {opponentName || "Opponent"}
           </div>
           <div
@@ -528,19 +531,43 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           >
             <OpponentBoard revealedCells={opponentRevealed} />
           </div>
-          <div className="text-xs font-mono text-ms-dark flex gap-3">
-            <span>{opponentRevealedCount} / {TOTAL_SAFE_CELLS}</span>
-            {opponentDeathCount > 0 && (
-              <span className="text-red-600">Deaths: {opponentDeathCount}</span>
-            )}
-          </div>
+          {opponentDeathCount > 0 && (
+            <div className="text-xs font-mono text-red-600">
+              Deaths: {opponentDeathCount}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bars */}
       {matchState === "playing" && (
-        <div className="text-sm font-mono">
-          You: {playerRevealedCount}/{TOTAL_SAFE_CELLS} | {opponentName}: {opponentRevealedCount}/{TOTAL_SAFE_CELLS}
+        <div className="flex flex-col gap-2 w-full max-w-xl">
+          {/* Player progress */}
+          <div className="flex items-center gap-2 font-mono text-sm">
+            <span className="w-24 text-right truncate font-bold text-blue-500">You</span>
+            <div className="flex-1 h-7 bg-[#333333] border border-[#222222] relative">
+              <div
+                className="h-full bg-blue-400 transition-all duration-300"
+                style={{ width: `${(playerRevealedCount / TOTAL_SAFE_CELLS) * 100}%` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                {Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)}%
+              </span>
+            </div>
+          </div>
+          {/* Opponent progress */}
+          <div className="flex items-center gap-2 font-mono text-sm">
+            <span className="w-24 text-right truncate font-bold text-rose-500">{opponentName || "Opponent"}</span>
+            <div className="flex-1 h-7 bg-[#333333] border border-[#222222] relative">
+              <div
+                className="h-full bg-rose-400 transition-all duration-300"
+                style={{ width: `${(opponentRevealedCount / TOTAL_SAFE_CELLS) * 100}%` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                {Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)}%
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

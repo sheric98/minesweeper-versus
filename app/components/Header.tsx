@@ -16,15 +16,23 @@ interface HeaderProps {
   elapsedSeconds: number;
   phase: GamePhase;
   onReset: () => void;
+  accentColor?: "blue" | "red";
 }
 
 const RAISED = "border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]";
 const SUNKEN_PANEL = "border-2 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]";
 
-export default function Header({ flagsRemaining, elapsedSeconds, phase, onReset }: HeaderProps) {
+const ACCENT_STYLES = {
+  blue: "bg-slate-300 border-t-slate-200 border-l-slate-200 border-b-slate-500 border-r-slate-500",
+  red: "bg-rose-200 border-t-rose-100 border-l-rose-100 border-b-rose-300 border-r-rose-300",
+  default: "bg-[#c0c0c0] border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]",
+};
+
+export default function Header({ flagsRemaining, elapsedSeconds, phase, onReset, accentColor }: HeaderProps) {
+  const accent = ACCENT_STYLES[accentColor ?? "default"];
   return (
     <div
-      className={`flex items-center justify-between px-2 py-1.5 bg-[#c0c0c0] border-4 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]`}
+      className={`flex items-center justify-between px-2 py-1.5 border-4 ${accent}`}
       style={{ width: `calc(${COLS} * 1.75rem + 8px)` }}
     >
       {/* Flag counter */}
