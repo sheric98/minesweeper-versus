@@ -587,6 +587,11 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           yourTimeMs={gameResult.yourTimeMs}
           opponentTimeMs={gameResult.opponentTimeMs}
           opponentDisconnected={disconnected}
+          loserPercent={
+            (gameResult.winner === playerName || gameResult.winner === "You")
+              ? Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)
+              : Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)
+          }
         />
       )}
     </div>

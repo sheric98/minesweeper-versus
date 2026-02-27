@@ -10,6 +10,7 @@ interface GameOverModalProps {
   yourTimeMs: number;
   opponentTimeMs: number;
   opponentDisconnected?: boolean;
+  loserPercent?: number;
 }
 
 function formatTime(ms: number): string {
@@ -25,6 +26,7 @@ export default function GameOverModal({
   yourTimeMs,
   opponentTimeMs,
   opponentDisconnected,
+  loserPercent,
 }: GameOverModalProps) {
   const router = useRouter();
   const didWin = winner === playerName || winner === "You";
@@ -46,9 +48,17 @@ export default function GameOverModal({
                 {opponentDisconnected && (
                   <p className="text-xs text-ms-dark mt-1">Opponent disconnected</p>
                 )}
+                {loserPercent != null && !opponentDisconnected && (
+                  <p className="text-xs text-ms-dark mt-1">Opponent cleared {loserPercent}%</p>
+                )}
               </>
             ) : (
-              <p className="text-2xl font-bold text-red-700">You lose.</p>
+              <>
+                <p className="text-2xl font-bold text-red-700">You lose.</p>
+                {loserPercent != null && (
+                  <p className="text-xs text-ms-dark mt-1">You cleared {loserPercent}% of the board</p>
+                )}
+              </>
             )}
           </div>
 
