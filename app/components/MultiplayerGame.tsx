@@ -27,6 +27,7 @@ import BoardComponent from "@/app/components/Board";
 import OpponentBoard from "@/app/components/OpponentBoard";
 import CooldownOverlay from "@/app/components/CooldownOverlay";
 import CountdownOverlay from "@/app/components/CountdownOverlay";
+import CountdownBoard from "@/app/components/CountdownBoard";
 import GameOverModal from "@/app/components/GameOverModal";
 
 const TOTAL_SAFE_CELLS = ROWS * COLS - MINE_COUNT;
@@ -495,6 +496,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
             onReset={() => {}}
             accentColor="blue"
           />
+          {matchState === "countdown" && <CountdownOverlay seconds={countdownSeconds} />}
           {board ? (
             <BoardComponent
               board={board}
@@ -507,6 +509,8 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               onBoardMouseDown={handleBoardMouseDown}
               onBoardMouseUp={handleBoardMouseUp}
             />
+          ) : matchState === "countdown" && startingSquareRef.current ? (
+            <CountdownBoard startingSquare={startingSquareRef.current} />
           ) : (
             <div
               className="bg-[#c0c0c0] border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8] flex items-center justify-center text-ms-dark"
@@ -579,7 +583,6 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
       )}
 
       {/* Overlays */}
-      {matchState === "countdown" && <CountdownOverlay seconds={countdownSeconds} />}
       {gameResult && (
         <GameOverModal
           winner={gameResult.winner}

@@ -27,3 +27,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes pulse-green {
+  0%, 100% {
+    background-color: #c0c0c0;
+  }
+  50% {
+    background-color: #4ade80;
+  }
+}

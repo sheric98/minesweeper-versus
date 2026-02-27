@@ -6,22 +6,15 @@ interface CountdownOverlayProps {
 
 export default function CountdownOverlay({ seconds }: CountdownOverlayProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className={`${RAISED} bg-ms-silver flex flex-col min-w-[240px]`}>
-        {/* Title bar */}
-        <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none">
-          Get Ready!
-        </div>
-
-        {/* Body */}
-        <div className="px-8 py-8 flex items-center justify-center">
-          {seconds > 0 ? (
-            <div className="text-8xl font-mono font-bold text-[#000080]">{seconds}</div>
-          ) : (
-            <div className="text-8xl font-mono font-bold text-green-700">GO!</div>
-          )}
-        </div>
-      </div>
+    <div className={`${RAISED} bg-ms-silver flex items-center justify-center gap-4 px-4 py-2 w-full`}>
+      {seconds > 0 ? (
+        <>
+          <span className="text-3xl font-mono font-bold text-[#000080]">{seconds}</span>
+          <span className="text-sm font-bold text-[#000080] select-none">Get Ready!</span>
+        </>
+      ) : (
+        <span className="text-3xl font-mono font-bold text-green-700">GO!</span>
+      )}
     </div>
   );
 }
