@@ -468,7 +468,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   return (
     <div className="flex flex-col items-center gap-4 select-none relative">
       {/* Connection status indicator */}
-      <div className="flex items-center gap-2 text-sm font-mono text-ms-dark">
+      <div className="fixed top-16 right-4 flex items-center gap-2 text-sm font-mono text-ms-dark z-50">
         <span
           className={`inline-block w-2.5 h-2.5 rounded-full ${
             connectionState === "connected"
@@ -478,6 +478,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
                 : "bg-red-500"
           }`}
         />
+        {connectionState === "connected" && "Connected"}
         {connectionState === "connecting" && "Connecting..."}
         {connectionState === "reconnecting" && "Reconnecting..."}
         {connectionState === "disconnected" && "Disconnected"}
