@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:full": "BACKEND_URL=http://localhost:5000 NEXT_PUBLIC_WS_URL=ws://localhost:5000 next dev"
   },
   "dependencies": {
     "next": "16.1.6",

@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 
 const RAISED = "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080] border-r-[#808080]";
+const BUTTON = `${RAISED} bg-ms-silver px-4 py-1 text-sm font-bold cursor-default active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`;
+
+export type RematchState = "idle" | "requested" | "waiting" | "declined";
 
 interface GameOverModalProps {
   winner: string;
@@ -11,6 +14,9 @@ interface GameOverModalProps {
   opponentTimeMs: number;
   opponentDisconnected?: boolean;
   loserPercent?: number;
+  rematchState: RematchState;
+  onRematchRequest: () => void;
+  onRematchDecline: () => void;
 }
 
 function formatTime(ms: number): string {
@@ -27,6 +33,9 @@ export default function GameOverModal({
   opponentTimeMs,
   opponentDisconnected,
   loserPercent,
+  rematchState,
+  onRematchRequest,
+  onRematchDecline,
 }: GameOverModalProps) {
   const router = useRouter();
   const didWin = winner === playerName || winner === "You";
@@ -71,12 +80,48 @@ export default function GameOverModal({
             )}
           </div>
 
-          <button
-            className={`${RAISED} bg-ms-silver px-4 py-1 text-sm font-bold self-end cursor-default active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
-            onClick={() => router.push("/multiplayer")}
-          >
-            Return to Lobby
-          </button>
+          {/* Rematch UI */}
+          <div className="flex flex-col gap-2 items-end">
+            {rematchState === "idle" && (
+              <div className="flex gap-2">
+                <button className={BUTTON} onClick={onRematchRequest}>
+                  Rematch
+                </button>
+                <button className={BUTTON} onClick={() => router.push("/multiplayer")}>
+                  Return to Lobby
+                </button>
+              </div>
+            )}
+
+            {rematchState === "requested" && (
+              <div className="flex flex-col gap-2 items-end">
+                <p className="text-sm font-bold text-[#000080]">Opponent wants a rematch!</p>
+                <div className="flex gap-2">
+                  <button className={BUTTON} onClick={onRematchRequest}>
+                    Accept
+                  </button>
+                  <button className={BUTTON} onClick={onRematchDecline}>
+                    Decline
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {rematchState === "waiting" && (
+              <div className="flex flex-col gap-2 items-end">
+                <p className="text-sm text-ms-dark">Waiting for opponent...</p>
+                <button className={BUTTON} onClick={() => router.push("/multiplayer")}>
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {rematchState === "declined" && (
+              <button className={BUTTON} onClick={() => router.push("/multiplayer")}>
+                Return to Lobby
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

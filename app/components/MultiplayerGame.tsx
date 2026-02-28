@@ -14,6 +14,7 @@ import {
   chordReveal,
 } from "@/app/lib/minesweeper";
 import type { MatchState, ClickLogEntry } from "@/app/lib/multiplayer-types";
+import type { RematchState } from "@/app/components/GameOverModal";
 import { diffRevealedCells, decodeBoard, cooldownDuration } from "@/app/lib/multiplayer-utils";
 import useMockWebSocket from "@/app/lib/useMockWebSocket";
 import useWebSocket from "@/app/lib/useWebSocket";
@@ -83,6 +84,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   const [opponentDeathCount, setOpponentDeathCount] = useState(0);
   const [opponentDeathFlash, setOpponentDeathFlash] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
+  const [rematchState, setRematchState] = useState<RematchState>("idle");
 
   // -- Refs for stable callbacks (synced post-commit, not during render) --
   const boardRef = useRef(board);
@@ -172,13 +174,45 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           break;
 
         case "opponent_disconnected":
-          setDisconnected(true);
-          setMatchState("finished");
-          setGameResult({
-            winner: playerName,
-            yourTimeMs: elapsedSecondsRef.current * 1000,
-            opponentTimeMs: 0,
-          });
+          if (matchStateRef.current === "finished") {
+            // Post-game disconnect — just mark rematch as declined
+            setRematchState("declined");
+          } else {
+            setDisconnected(true);
+            setMatchState("finished");
+            setGameResult({
+              winner: playerName,
+              yourTimeMs: elapsedSecondsRef.current * 1000,
+              opponentTimeMs: 0,
+            });
+          }
+          break;
+
+        case "rematch_requested":
+          setRematchState("requested");
+          break;
+
+        case "rematch_accepted":
+          // Full game state reset for new game
+          setBoard(null);
+          setMatchState("lobby");
+          setOpponentRevealed(new Set());
+          setOpponentRevealedCount(0);
+          setCountdownSeconds(5);
+          setCooldownMs(0);
+          setDeathCount(0);
+          setElapsedSeconds(0);
+          setClickLog([]);
+          setSunkCells(new Set());
+          setGameResult(null);
+          setOpponentDeathCount(0);
+          setOpponentDeathFlash(false);
+          setDisconnected(false);
+          setRematchState("idle");
+          break;
+
+        case "rematch_declined":
+          setRematchState("declined");
           break;
       }
     }, [playerName]),
@@ -441,6 +475,17 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // -- Rematch handlers --
+  const handleRematchRequest = useCallback(() => {
+    sendRef.current({ type: "rematch_request" });
+    setRematchState("waiting");
+  }, []);
+
+  const handleRematchDecline = useCallback(() => {
+    sendRef.current({ type: "rematch_decline" });
+    setRematchState("declined");
+  }, []);
+
   // -- Derived values --
   const flagsRemaining = board ? MINE_COUNT - countFlags(board) : MINE_COUNT;
 
@@ -595,6 +640,9 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               ? Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)
               : Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)
           }
+          rematchState={rematchState}
+          onRematchRequest={handleRematchRequest}
+          onRematchDecline={handleRematchDecline}
         />
       )}
     </div>

@@ -29,7 +29,9 @@ export type ClientMessage =
       col: number;
       resultCells: { row: number; col: number }[];
     }
-  | { type: "game_complete"; timeMs: number; clickLog: ClickLogEntry[] };
+  | { type: "game_complete"; timeMs: number; clickLog: ClickLogEntry[] }
+  | { type: "rematch_request" }
+  | { type: "rematch_decline" };
 
 // Server → Client messages
 export type ServerMessage =
@@ -53,7 +55,10 @@ export type ServerMessage =
       yourTimeMs: number;
       opponentTimeMs: number;
     }
-  | { type: "opponent_disconnected" };
+  | { type: "opponent_disconnected" }
+  | { type: "rematch_requested"; by: string }
+  | { type: "rematch_accepted" }
+  | { type: "rematch_declined" };
 
 // Multiplayer game state managed by MultiplayerGame component
 export interface MultiplayerGameState {
