@@ -145,7 +145,7 @@ export default function MatchmakingLobby() {
       setSentInvite({ inviteId: data.inviteId!, target: targetUsername });
 
       // ── Mock simulation triggers ──────────────────────────────
-      if (data.inviteId.startsWith("inv_")) {
+      if (data.inviteId?.startsWith("inv_")) {
         if (targetUsername === "sweeper42") {
           // Scenario A: inviting sweeper42 → minehunter sends us an invite after 2s
           mockTimerRef.current = setTimeout(() => {
