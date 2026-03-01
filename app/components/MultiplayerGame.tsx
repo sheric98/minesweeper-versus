@@ -208,6 +208,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           setOpponentDeathCount(0);
           setOpponentDeathFlash(false);
           setDisconnected(false);
+          startingSquareRef.current = null;
           setRematchState("idle");
           break;
 

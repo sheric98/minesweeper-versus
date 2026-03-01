@@ -134,8 +134,15 @@ export default function MatchmakingLobby() {
         setError(data.error ?? "Failed to send invite.");
         return;
       }
-      const data = (await res.json()) as { inviteId: string };
-      setSentInvite({ inviteId: data.inviteId, target: targetUsername });
+      const data = (await res.json()) as { inviteId?: string; matchId?: string };
+
+      // Mutual invite auto-accepted — go straight to game
+      if (data.matchId) {
+        router.push(`/multiplayer/game?matchId=${data.matchId}`);
+        return;
+      }
+
+      setSentInvite({ inviteId: data.inviteId!, target: targetUsername });
 
       // ── Mock simulation triggers ──────────────────────────────
       if (data.inviteId.startsWith("inv_")) {
