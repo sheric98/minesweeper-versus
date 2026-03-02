@@ -20,7 +20,7 @@ function validateUsername(
 // Once BACKEND_URL is configured, this branch is never reached.
 function mockToken(username: string): string {
   const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
-  const payload = btoa(JSON.stringify({ sub: username, iat: Date.now(), mock: true }));
+  const payload = btoa(JSON.stringify({ sub: username, iat: Date.now(), mock: true, authLevel: "anonymous" }));
   return `${header}.${payload}.mock`;
 }
 

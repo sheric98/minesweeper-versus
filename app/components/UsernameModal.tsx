@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface Props {
   isAuthenticated: boolean;
+  oauthError?: string;
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
@@ -15,7 +16,7 @@ const RAISED = "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080
 const SUNKEN = "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
 const PRESSED = "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
 
-export default function UsernameModal({ isAuthenticated }: Props) {
+export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +75,30 @@ export default function UsernameModal({ isAuthenticated }: Props) {
 
         {/* Body */}
         <div className="px-4 py-4 flex flex-col gap-3">
-          <p className="text-sm">Choose a username to join multiplayer:</p>
+          {oauthError && (
+            <p className="text-red-700 text-xs bg-white px-2 py-1 border border-red-700">
+              {oauthError === "state" ? "Sign-in expired. Please try again." :
+               oauthError === "exchange" ? "Could not complete sign-in. Please try again." :
+               oauthError === "verify" ? "Could not verify your account. Please try again." :
+               oauthError === "backend" ? "Server error during sign-in. Please try again." :
+               "Sign-in failed. Please try again."}
+            </p>
+          )}
+
+          {/* Google sign-in */}
+          <a
+            href="/api/auth/google/init"
+            className={`${RAISED} bg-ms-silver px-4 py-1.5 text-sm font-bold text-center cursor-default hover:brightness-95 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+          >
+            Sign in with Google
+          </a>
+
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 border-t border-[#808080]" />
+            <span className="text-xs text-[#808080] select-none">or play as guest</span>
+            <div className="flex-1 border-t border-[#808080]" />
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-2">
             <input

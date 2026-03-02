@@ -27,12 +27,14 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
   let username: string | undefined;
+  let authLevel: "anonymous" | "google" | undefined;
   if (token) {
     try {
       const parts = token.split(".");
       if (parts.length >= 2) {
         const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
         if (typeof payload.sub === "string") username = payload.sub;
+        authLevel = payload.authLevel === "google" ? "google" : "anonymous";
       }
     } catch { /* malformed token — render nothing */ }
   }
@@ -42,7 +44,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <NavBar username={username} />
+        <NavBar username={username} authLevel={authLevel} />
         {children}
       </body>
     </html>

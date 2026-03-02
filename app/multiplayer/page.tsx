@@ -2,7 +2,12 @@ import { cookies } from "next/headers";
 import UsernameModal from "@/app/components/UsernameModal";
 import MatchmakingLobby from "@/app/components/MatchmakingLobby";
 
-export default async function MultiplayerPage() {
+export default async function MultiplayerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error: oauthError } = await searchParams;
   const cookieStore = await cookies();
   // Read auth status server-side — the JWT value never reaches client JS.
   const isAuthenticated = cookieStore.has("session");
@@ -30,7 +35,7 @@ export default async function MultiplayerPage() {
       )}
 
       {/* Shows username prompt when unauthenticated; renders null otherwise */}
-      <UsernameModal isAuthenticated={isAuthenticated} />
+      <UsernameModal isAuthenticated={isAuthenticated} oauthError={oauthError} />
     </main>
   );
 }

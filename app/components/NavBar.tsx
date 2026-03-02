@@ -10,9 +10,10 @@ const LINKS = [
 
 interface Props {
   username?: string;
+  authLevel?: "anonymous" | "google";
 }
 
-export default function NavBar({ username }: Props) {
+export default function NavBar({ username, authLevel }: Props) {
   const pathname = usePathname();
 
   return (
@@ -45,7 +46,20 @@ export default function NavBar({ username }: Props) {
         );
       })}
       {username && (
-        <span className="ml-auto text-sm font-bold select-none px-2">{username}</span>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm font-bold select-none px-2">
+            {username}
+            {authLevel === "google" && (
+              <span className="ml-1 text-xs font-normal text-[#808080]">(Google)</span>
+            )}
+          </span>
+          <a
+            href="/api/auth/signout"
+            className="text-xs text-[#808080] hover:text-black select-none underline"
+          >
+            Sign out
+          </a>
+        </div>
       )}
     </nav>
   );
