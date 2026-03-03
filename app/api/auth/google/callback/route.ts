@@ -37,7 +37,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     response.cookies.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
       maxAge: THIRTY_DAYS,
     });
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     response.cookies.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
       maxAge: THIRTY_DAYS,
     });
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   response.cookies.set("session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: THIRTY_DAYS,
   });
