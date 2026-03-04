@@ -14,6 +14,8 @@ interface GameOverModalProps {
   opponentTimeMs: number;
   opponentDisconnected?: boolean;
   loserPercent?: number;
+  playerWins: number;
+  opponentWins: number;
   rematchState: RematchState;
   onRematchRequest: () => void;
   onRematchDecline: () => void;
@@ -33,6 +35,8 @@ export default function GameOverModal({
   opponentTimeMs,
   opponentDisconnected,
   loserPercent,
+  playerWins,
+  opponentWins,
   rematchState,
   onRematchRequest,
   onRematchDecline,
@@ -79,6 +83,15 @@ export default function GameOverModal({
               <p>Opponent: <span className="font-mono font-bold">{formatTime(opponentTimeMs)}</span></p>
             )}
           </div>
+
+          {/* Series score (shown from second game onward) */}
+          {(playerWins + opponentWins > 1) && (
+            <div className="text-center font-mono text-sm border-t border-[#a0a0a0] pt-2">
+              Series: <span className="font-bold text-blue-600">{playerWins}</span>
+              {" - "}
+              <span className="font-bold text-rose-600">{opponentWins}</span>
+            </div>
+          )}
 
           {/* Rematch UI */}
           <div className="flex flex-col gap-2 items-end">

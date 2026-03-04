@@ -85,6 +85,8 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   const [opponentDeathFlash, setOpponentDeathFlash] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
   const [rematchState, setRematchState] = useState<RematchState>("idle");
+  const [playerWins, setPlayerWins] = useState(0);
+  const [opponentWins, setOpponentWins] = useState(0);
 
   // -- Refs for stable callbacks (synced post-commit, not during render) --
   const boardRef = useRef(board);
@@ -171,6 +173,11 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
             yourTimeMs: msg.yourTimeMs,
             opponentTimeMs: msg.opponentTimeMs,
           });
+          if (msg.winner === playerName || msg.winner === "You") {
+            setPlayerWins(prev => prev + 1);
+          } else {
+            setOpponentWins(prev => prev + 1);
+          }
           break;
 
         case "opponent_disconnected":
@@ -185,6 +192,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               yourTimeMs: elapsedSecondsRef.current * 1000,
               opponentTimeMs: 0,
             });
+            setPlayerWins(prev => prev + 1);
           }
           break;
 
@@ -596,6 +604,15 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
         </div>
       </div>
 
+      {/* Series score (shown after first game) */}
+      {(playerWins + opponentWins > 0) && (matchState === "playing" || matchState === "finished") && (
+        <div className="font-mono text-xs text-ms-dark text-center">
+          Series: <span className="text-blue-500 font-bold">{playerWins}</span>
+          {" - "}
+          <span className="text-rose-500 font-bold">{opponentWins}</span>
+        </div>
+      )}
+
       {/* Progress bars */}
       {(matchState === "playing" || matchState === "finished") && (
         <div className="flex flex-col gap-2 w-full max-w-xl">
@@ -641,6 +658,8 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               ? Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)
               : Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)
           }
+          playerWins={playerWins}
+          opponentWins={opponentWins}
           rematchState={rematchState}
           onRematchRequest={handleRematchRequest}
           onRematchDecline={handleRematchDecline}
