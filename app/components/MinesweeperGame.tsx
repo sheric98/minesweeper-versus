@@ -18,6 +18,7 @@ import {
 } from "@/app/lib/minesweeper";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
+import Leaderboard from "@/app/components/Leaderboard";
 
 function computeSunkCells(
   hovered: { row: number; col: number } | null,
@@ -44,11 +45,18 @@ function computeSunkCells(
   return board[row][col].state === "unrevealed" ? new Set([`${row}-${col}`]) : new Set();
 }
 
-export default function MinesweeperGame() {
+interface MinesweeperGameProps {
+  authLevel?: "anonymous" | "google";
+  username?: string;
+}
+
+export default function MinesweeperGame({ authLevel, username }: MinesweeperGameProps) {
   const [board, setBoard] = useState<Board>(() => createEmptyBoard());
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
+  const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const scoreSubmittedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Stable refs so callbacks never go stale
@@ -63,6 +71,20 @@ export default function MinesweeperGame() {
     boardRef.current = board;
     phaseRef.current = phase;
   });
+
+  // Submit score on win
+  useEffect(() => {
+    if (phase === "won" && authLevel === "google" && !scoreSubmittedRef.current) {
+      scoreSubmittedRef.current = true;
+      fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ time_seconds: elapsedSeconds }),
+      })
+        .then(() => setLeaderboardRefreshKey((k) => k + 1))
+        .catch(() => {});
+    }
+  }, [phase, authLevel, elapsedSeconds]);
 
   // Timer: start when playing, stop otherwise
   useEffect(() => {
@@ -126,6 +148,7 @@ export default function MinesweeperGame() {
     setBoard(createEmptyBoard());
     setPhase("idle");
     setElapsedSeconds(0);
+    scoreSubmittedRef.current = false;
   }, []);
 
   // Track hovered cell for spacebar/chord handling (ref to avoid re-renders)
@@ -251,28 +274,38 @@ export default function MinesweeperGame() {
   const flagsRemaining = MINE_COUNT - countFlags(board);
 
   return (
-    <div className="flex flex-col items-center gap-0 select-none">
-      <Header
-        flagsRemaining={flagsRemaining}
-        elapsedSeconds={elapsedSeconds}
-        phase={phase}
-        onReset={handleReset}
-      />
-      <BoardComponent
-        board={board}
-        phase={phase}
-        sunkCells={sunkCells}
-        onCellLeftClick={handleCellLeftClick}
-        onCellRightClick={handleCellRightClick}
-        onCellMouseEnter={handleCellMouseEnter}
-        onBoardMouseLeave={handleBoardMouseLeave}
-        onBoardMouseDown={handleBoardMouseDown}
-        onBoardMouseUp={handleBoardMouseUp}
-      />
-      <p className="mt-2 font-mono font-bold h-5">
-        {phase === "won" && <span className="text-green-700">You win!</span>}
-        {phase === "lost" && <span className="text-red-700">Game over.</span>}
-      </p>
+    <div className="flex flex-row items-start gap-4 select-none">
+      <div className="flex flex-col items-center gap-0">
+        <Header
+          flagsRemaining={flagsRemaining}
+          elapsedSeconds={elapsedSeconds}
+          phase={phase}
+          onReset={handleReset}
+        />
+        <BoardComponent
+          board={board}
+          phase={phase}
+          sunkCells={sunkCells}
+          onCellLeftClick={handleCellLeftClick}
+          onCellRightClick={handleCellRightClick}
+          onCellMouseEnter={handleCellMouseEnter}
+          onBoardMouseLeave={handleBoardMouseLeave}
+          onBoardMouseDown={handleBoardMouseDown}
+          onBoardMouseUp={handleBoardMouseUp}
+        />
+        <p className="mt-2 font-mono font-bold h-5">
+          {phase === "won" && (
+            <>
+              <span className="text-green-700">You win!</span>
+              {authLevel !== "google" && (
+                <span className="text-[#808080] text-xs ml-2">Sign in to save scores</span>
+              )}
+            </>
+          )}
+          {phase === "lost" && <span className="text-red-700">Game over.</span>}
+        </p>
+      </div>
+      <Leaderboard username={username} refreshKey={leaderboardRefreshKey} />
     </div>
   );
 }
