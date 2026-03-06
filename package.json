@@ -10,6 +10,7 @@
     "dev:full": "BACKEND_URL=http://localhost:5000 NEXT_PUBLIC_WS_URL=ws://localhost:5000 next dev"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.6.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

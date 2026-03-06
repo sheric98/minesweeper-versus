@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
 import NavBar from "@/app/components/NavBar";
 
 const geistSans = Geist({
@@ -46,6 +47,7 @@ export default async function RootLayout({
       >
         <NavBar username={username} authLevel={authLevel} />
         {children}
+        <Analytics />
       </body>
     </html>
   );
