@@ -87,6 +87,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   const [rematchState, setRematchState] = useState<RematchState>("idle");
   const [playerWins, setPlayerWins] = useState(0);
   const [opponentWins, setOpponentWins] = useState(0);
+  const [h2hRecord, setH2hRecord] = useState<{ wins: number; losses: number } | null>(null);
 
   // -- Refs for stable callbacks (synced post-commit, not during render) --
   const boardRef = useRef(board);
@@ -114,6 +115,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
 
   // Store startingSquare for initial reveal after game_start
   const startingSquareRef = useRef<[number, number] | null>(null);
+  const opponentNameRef = useRef("");
 
   // Ref for the send function to avoid stale closures
   const sendRef = useRef<(msg: import("@/app/lib/multiplayer-types").ClientMessage) => void>(() => {});
@@ -125,6 +127,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
       switch (msg.type) {
         case "match_found":
           setOpponentName(msg.opponent);
+          opponentNameRef.current = msg.opponent;
           startingSquareRef.current = msg.startingSquare;
           setMatchState("countdown");
           break;
@@ -178,6 +181,11 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           } else {
             setOpponentWins(prev => prev + 1);
           }
+          // Fetch head-to-head record (will 401 if not Google-authenticated, which is fine)
+          fetch(`/api/head-to-head?opponent=${encodeURIComponent(opponentNameRef.current)}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => { if (data && typeof data.wins === "number") setH2hRecord(data); })
+            .catch(() => {});
           break;
 
         case "opponent_disconnected":
@@ -218,6 +226,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           setDisconnected(false);
           startingSquareRef.current = null;
           setRematchState("idle");
+          setH2hRecord(null);
           break;
 
         case "rematch_declined":
@@ -660,6 +669,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           }
           playerWins={playerWins}
           opponentWins={opponentWins}
+          h2hRecord={h2hRecord}
           rematchState={rematchState}
           onRematchRequest={handleRematchRequest}
           onRematchDecline={handleRematchDecline}

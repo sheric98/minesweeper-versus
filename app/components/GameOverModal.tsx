@@ -16,6 +16,7 @@ interface GameOverModalProps {
   loserPercent?: number;
   playerWins: number;
   opponentWins: number;
+  h2hRecord: { wins: number; losses: number } | null;
   rematchState: RematchState;
   onRematchRequest: () => void;
   onRematchDecline: () => void;
@@ -37,6 +38,7 @@ export default function GameOverModal({
   loserPercent,
   playerWins,
   opponentWins,
+  h2hRecord,
   rematchState,
   onRematchRequest,
   onRematchDecline,
@@ -90,6 +92,15 @@ export default function GameOverModal({
               Series: <span className="font-bold text-blue-600">{playerWins}</span>
               {" - "}
               <span className="font-bold text-rose-600">{opponentWins}</span>
+            </div>
+          )}
+
+          {/* Head-to-head record (Google-authenticated players only) */}
+          {h2hRecord && (
+            <div className="text-center font-mono text-xs border-t border-[#a0a0a0] pt-2 text-ms-dark">
+              All-time H2H: <span className="font-bold text-blue-600">{h2hRecord.wins}</span>
+              {" - "}
+              <span className="font-bold text-rose-600">{h2hRecord.losses}</span>
             </div>
           )}
 
