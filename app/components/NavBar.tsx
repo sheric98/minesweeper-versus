@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/", label: "Singleplayer" },
   { href: "/multiplayer", label: "Multiplayer" },
+  { href: "/stats", label: "Stats" },
 ];
 
 interface Props {
