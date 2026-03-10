@@ -16,9 +16,15 @@ import {
   countFlags,
   chordReveal,
 } from "@/app/lib/minesweeper";
+import { generateSolvableBoard } from "@/app/lib/board-generator";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import Leaderboard from "@/app/components/Leaderboard";
+
+type GameMode = "random" | "no-guess";
+
+const RAISED = "border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]";
+const SUNKEN_PANEL = "border-2 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]";
 
 function computeSunkCells(
   hovered: { row: number; col: number } | null,
@@ -56,7 +62,11 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const [mode, setMode] = useState<GameMode>("random");
+  const [isGenerating, setIsGenerating] = useState(false);
   const scoreSubmittedRef = useRef(false);
+  const modeRef = useRef(mode);
+  const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Stable refs so callbacks never go stale
@@ -70,6 +80,8 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
   useLayoutEffect(() => {
     boardRef.current = board;
     phaseRef.current = phase;
+    modeRef.current = mode;
+    isGeneratingRef.current = isGenerating;
   });
 
   // Submit score on win
@@ -79,12 +91,12 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
       fetch("/api/leaderboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ time_seconds: elapsedSeconds }),
+        body: JSON.stringify({ time_seconds: elapsedSeconds, mode }),
       })
         .then(() => setLeaderboardRefreshKey((k) => k + 1))
         .catch(() => {});
     }
-  }, [phase, authLevel, elapsedSeconds]);
+  }, [phase, authLevel, elapsedSeconds, mode]);
 
   // Timer: start when playing, stop otherwise
   useEffect(() => {
@@ -107,6 +119,7 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
   }, [phase]);
 
   const handleCellLeftClick = useCallback((row: number, col: number) => {
+    if (isGeneratingRef.current) return;
     const currentPhase = phaseRef.current;
     const currentBoard = boardRef.current;
 
@@ -118,6 +131,21 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
     let workingBoard = currentBoard;
 
     if (currentPhase === "idle") {
+      if (modeRef.current === "no-guess") {
+        setIsGenerating(true);
+        // Use setTimeout to let the UI update before the CPU-intensive generation
+        setTimeout(() => {
+          const result = generateSolvableBoard();
+          const revealed = revealCell(result.board, result.startingSquare.row, result.startingSquare.col);
+          setBoard(revealed);
+          setPhase("playing");
+          setIsGenerating(false);
+          if (checkWin(revealed)) {
+            setPhase("won");
+          }
+        }, 0);
+        return;
+      }
       workingBoard = generateBoard(row, col);
       setPhase("playing");
     }
@@ -138,7 +166,7 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
 
   const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
-    if (phaseRef.current !== "playing") return;
+    if (phaseRef.current !== "playing" || isGeneratingRef.current) return;
     if (e.buttons & 1) return; // left button held — chording, not flagging
     if (wasChordingRef.current) return; // chord just ended — suppress flag on second-button release
     setBoard(prev => toggleFlag(prev, row, col));
@@ -273,6 +301,8 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
 
   const flagsRemaining = MINE_COUNT - countFlags(board);
 
+  const modeToggleDisabled = phase === "playing" || isGenerating;
+
   return (
     <div className="flex flex-row items-start gap-4 select-none">
       <div className="flex flex-col items-center gap-0">
@@ -282,6 +312,29 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
           phase={phase}
           onReset={handleReset}
         />
+        <div
+          className="flex bg-[#c0c0c0] border-x-4 border-[#c0c0c0]"
+          style={{ width: `calc(${COLS} * 1.75rem + 8px)` }}
+        >
+          <button
+            className={`flex-1 font-mono text-xs font-bold py-1 cursor-pointer ${
+              mode === "random" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
+            } ${modeToggleDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+            onClick={() => !modeToggleDisabled && setMode("random")}
+            disabled={modeToggleDisabled}
+          >
+            Random
+          </button>
+          <button
+            className={`flex-1 font-mono text-xs font-bold py-1 cursor-pointer ${
+              mode === "no-guess" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
+            } ${modeToggleDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+            onClick={() => !modeToggleDisabled && setMode("no-guess")}
+            disabled={modeToggleDisabled}
+          >
+            No Guess
+          </button>
+        </div>
         <BoardComponent
           board={board}
           phase={phase}
@@ -294,7 +347,8 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
           onBoardMouseUp={handleBoardMouseUp}
         />
         <p className="mt-2 font-mono font-bold h-5">
-          {phase === "won" && (
+          {isGenerating && <span className="text-[#808080]">Generating board...</span>}
+          {!isGenerating && phase === "won" && (
             <>
               <span className="text-green-700">You win!</span>
               {authLevel !== "google" && (
@@ -302,10 +356,10 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
               )}
             </>
           )}
-          {phase === "lost" && <span className="text-red-700">Game over.</span>}
+          {!isGenerating && phase === "lost" && <span className="text-red-700">Game over.</span>}
         </p>
       </div>
-      <Leaderboard username={username} refreshKey={leaderboardRefreshKey} />
+      <Leaderboard username={username} refreshKey={leaderboardRefreshKey} mode={mode} />
     </div>
   );
 }

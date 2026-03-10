@@ -88,6 +88,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   const [playerWins, setPlayerWins] = useState(0);
   const [opponentWins, setOpponentWins] = useState(0);
   const [h2hRecord, setH2hRecord] = useState<{ wins: number; losses: number } | null>(null);
+  const [startingSquare, setStartingSquare] = useState<[number, number] | null>(null);
 
   // -- Refs for stable callbacks (synced post-commit, not during render) --
   const boardRef = useRef(board);
@@ -129,6 +130,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           setOpponentName(msg.opponent);
           opponentNameRef.current = msg.opponent;
           startingSquareRef.current = msg.startingSquare;
+          setStartingSquare(msg.startingSquare);
           setMatchState("countdown");
           break;
 
@@ -225,6 +227,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           setOpponentDeathFlash(false);
           setDisconnected(false);
           startingSquareRef.current = null;
+          setStartingSquare(null);
           setRematchState("idle");
           setH2hRecord(null);
           break;
@@ -572,8 +575,8 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               onBoardMouseDown={handleBoardMouseDown}
               onBoardMouseUp={handleBoardMouseUp}
             />
-          ) : matchState === "countdown" && startingSquareRef.current ? (
-            <CountdownBoard startingSquare={startingSquareRef.current} />
+          ) : matchState === "countdown" && startingSquare ? (
+            <CountdownBoard startingSquare={startingSquare} />
           ) : (
             <div
               className="bg-[#c0c0c0] border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8] flex items-center justify-center text-ms-dark"
