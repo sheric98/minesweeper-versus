@@ -135,8 +135,8 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
         setIsGenerating(true);
         // Use setTimeout to let the UI update before the CPU-intensive generation
         setTimeout(() => {
-          const result = generateSolvableBoard();
-          const revealed = revealCell(result.board, result.startingSquare.row, result.startingSquare.col);
+          const result = generateSolvableBoard(row, col);
+          const revealed = revealCell(result.board, row, col);
           setBoard(revealed);
           setPhase("playing");
           setIsGenerating(false);

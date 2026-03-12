@@ -6,11 +6,25 @@ interface SolverBoard {
   adjacentMines: number;
 }
 
-function generateRandomBoard(): SolverBoard[][] {
+function generateRandomBoard(startRow: number, startCol: number): SolverBoard[][] {
+  // Build safe zone around starting square (the cell + all 8 neighbors)
+  const safeZone = new Set<string>();
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      const nr = startRow + dr;
+      const nc = startCol + dc;
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+        safeZone.add(`${nr},${nc}`);
+      }
+    }
+  }
+
   const allPositions: [number, number][] = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      allPositions.push([r, c]);
+      if (!safeZone.has(`${r},${c}`)) {
+        allPositions.push([r, c]);
+      }
     }
   }
 
@@ -54,56 +68,6 @@ function generateRandomBoard(): SolverBoard[][] {
   return board;
 }
 
-function findZeroCells(board: SolverBoard[][]): [number, number][] {
-  const result: [number, number][] = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (!board[r][c].isMine && board[r][c].adjacentMines === 0) {
-        result.push([r, c]);
-      }
-    }
-  }
-  return result;
-}
-
-function uniqueStartingRegions(board: SolverBoard[][], zeroCells: [number, number][]): [number, number][] {
-  const visited = new Set<string>();
-  const representatives: [number, number][] = [];
-
-  for (const [r, c] of zeroCells) {
-    const key = `${r},${c}`;
-    if (visited.has(key)) continue;
-    representatives.push([r, c]);
-
-    // BFS to mark all connected zero cells in this region
-    const queue: [number, number][] = [[r, c]];
-    while (queue.length > 0) {
-      const [cr, cc] = queue.shift()!;
-      const ck = `${cr},${cc}`;
-      if (visited.has(ck)) continue;
-      visited.add(ck);
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          const nr = cr + dr;
-          const nc = cc + dc;
-          if (
-            nr >= 0 && nr < ROWS &&
-            nc >= 0 && nc < COLS &&
-            !visited.has(`${nr},${nc}`) &&
-            !board[nr][nc].isMine &&
-            board[nr][nc].adjacentMines === 0
-          ) {
-            queue.push([nr, nc]);
-          }
-        }
-      }
-    }
-  }
-
-  return representatives;
-}
-
 /** Convert solver board format to game Board format */
 function toGameBoard(solverBoard: SolverBoard[][]): Board {
   const board = createEmptyBoard();
@@ -121,41 +85,21 @@ export interface SolvableBoardResult {
   startingSquare: { row: number; col: number };
 }
 
-export function generateSolvableBoard(maxAttempts = 1000): SolvableBoardResult {
+export function generateSolvableBoard(startRow: number, startCol: number, maxAttempts = 1000): SolvableBoardResult {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const board = generateRandomBoard();
-    const zeroCells = findZeroCells(board);
-    if (zeroCells.length === 0) continue;
-
-    const representatives = uniqueStartingRegions(board, zeroCells);
-    // Shuffle representatives
-    for (let i = representatives.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [representatives[i], representatives[j]] = [representatives[j], representatives[i]];
-    }
-
-    for (const [r, c] of representatives) {
-      if (isSolvable(board, r, c)) {
-        return {
-          board: toGameBoard(board),
-          startingSquare: { row: r, col: c },
-        };
-      }
+    const board = generateRandomBoard(startRow, startCol);
+    if (isSolvable(board, startRow, startCol)) {
+      return {
+        board: toGameBoard(board),
+        startingSquare: { row: startRow, col: startCol },
+      };
     }
   }
 
   // Fallback (extremely unlikely)
-  const board = generateRandomBoard();
-  const zeroCells = findZeroCells(board);
-  if (zeroCells.length > 0) {
-    const idx = Math.floor(Math.random() * zeroCells.length);
-    return {
-      board: toGameBoard(board),
-      startingSquare: { row: zeroCells[idx][0], col: zeroCells[idx][1] },
-    };
-  }
+  const board = generateRandomBoard(startRow, startCol);
   return {
     board: toGameBoard(board),
-    startingSquare: { row: 0, col: 0 },
+    startingSquare: { row: startRow, col: startCol },
   };
 }
