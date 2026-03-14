@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import MinesweeperGame from "@/app/components/MinesweeperGame";
 
-export default async function Home() {
+export default async function NoGuess() {
   const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
   let username: string | undefined;
@@ -19,7 +19,7 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 items-center justify-center bg-[#c0c0c0]">
-      <MinesweeperGame mode="random" authLevel={authLevel} username={username} />
+      <MinesweeperGame mode="no-guess" authLevel={authLevel} username={username} />
     </main>
   );
 }

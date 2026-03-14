@@ -21,44 +21,20 @@ interface LeaderboardProps {
 
 export default function Leaderboard({ username, refreshKey, mode = "random" }: LeaderboardProps) {
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<LeaderboardMode>(mode);
-
-  // Sync active tab when game mode changes
-  useEffect(() => {
-    setActiveTab(mode);
-  }, [mode]);
 
   useEffect(() => {
-    fetch(`/api/leaderboard?mode=${activeTab}`)
+    fetch(`/api/leaderboard?mode=${mode}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.scores) setScores(data.scores);
       })
       .catch(() => {});
-  }, [refreshKey, activeTab]);
+  }, [refreshKey, mode]);
 
   return (
     <div className={`${RAISED} bg-[#c0c0c0] p-2 w-56 flex-shrink-0`}>
       <div className={`${SUNKEN_PANEL} bg-white p-2`}>
         <h3 className="font-mono font-bold text-sm text-center mb-2">LEADERBOARD</h3>
-        <div className="flex mb-2">
-          <button
-            className={`flex-1 font-mono text-xs font-bold py-0.5 cursor-pointer ${
-              activeTab === "random" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
-            }`}
-            onClick={() => setActiveTab("random")}
-          >
-            Random
-          </button>
-          <button
-            className={`flex-1 font-mono text-xs font-bold py-0.5 cursor-pointer ${
-              activeTab === "no-guess" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
-            }`}
-            onClick={() => setActiveTab("no-guess")}
-          >
-            No Guess
-          </button>
-        </div>
         <table className="w-full font-mono text-xs">
           <thead>
             <tr className="border-b border-[#a0a0a0]">

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Singleplayer" },
+  { href: "/no-guess", label: "No Guess" },
   { href: "/multiplayer", label: "Multiplayer" },
   { href: "/stats", label: "Stats" },
 ];

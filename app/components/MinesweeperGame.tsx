@@ -23,9 +23,6 @@ import Leaderboard from "@/app/components/Leaderboard";
 
 type GameMode = "random" | "no-guess";
 
-const RAISED = "border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]";
-const SUNKEN_PANEL = "border-2 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]";
-
 function computeSunkCells(
   hovered: { row: number; col: number } | null,
   leftDown: boolean,
@@ -54,18 +51,17 @@ function computeSunkCells(
 interface MinesweeperGameProps {
   authLevel?: "anonymous" | "google";
   username?: string;
+  mode?: GameMode;
 }
 
-export default function MinesweeperGame({ authLevel, username }: MinesweeperGameProps) {
+export default function MinesweeperGame({ authLevel, username, mode = "random" }: MinesweeperGameProps) {
   const [board, setBoard] = useState<Board>(() => createEmptyBoard());
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
-  const [mode, setMode] = useState<GameMode>("random");
   const [isGenerating, setIsGenerating] = useState(false);
   const scoreSubmittedRef = useRef(false);
-  const modeRef = useRef(mode);
   const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -80,7 +76,6 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
   useLayoutEffect(() => {
     boardRef.current = board;
     phaseRef.current = phase;
-    modeRef.current = mode;
     isGeneratingRef.current = isGenerating;
   });
 
@@ -131,7 +126,7 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
     let workingBoard = currentBoard;
 
     if (currentPhase === "idle") {
-      if (modeRef.current === "no-guess") {
+      if (mode === "no-guess") {
         setIsGenerating(true);
         // Use setTimeout to let the UI update before the CPU-intensive generation
         setTimeout(() => {
@@ -162,7 +157,7 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
     if (checkWin(nextBoard)) {
       setPhase("won");
     }
-  }, []);
+  }, [mode]);
 
   const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
@@ -301,8 +296,6 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
 
   const flagsRemaining = MINE_COUNT - countFlags(board);
 
-  const modeToggleDisabled = phase === "playing" || isGenerating;
-
   return (
     <div className="flex flex-row items-start gap-4 select-none">
       <div className="flex flex-col items-center gap-0">
@@ -312,29 +305,6 @@ export default function MinesweeperGame({ authLevel, username }: MinesweeperGame
           phase={phase}
           onReset={handleReset}
         />
-        <div
-          className="flex bg-[#c0c0c0] border-x-4 border-[#c0c0c0]"
-          style={{ width: `calc(${COLS} * 1.75rem + 8px)` }}
-        >
-          <button
-            className={`flex-1 font-mono text-xs font-bold py-1 cursor-pointer ${
-              mode === "random" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
-            } ${modeToggleDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-            onClick={() => !modeToggleDisabled && setMode("random")}
-            disabled={modeToggleDisabled}
-          >
-            Random
-          </button>
-          <button
-            className={`flex-1 font-mono text-xs font-bold py-1 cursor-pointer ${
-              mode === "no-guess" ? SUNKEN_PANEL + " bg-[#b0b0b0]" : RAISED + " bg-[#c0c0c0]"
-            } ${modeToggleDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-            onClick={() => !modeToggleDisabled && setMode("no-guess")}
-            disabled={modeToggleDisabled}
-          >
-            No Guess
-          </button>
-        </div>
         <BoardComponent
           board={board}
           phase={phase}
