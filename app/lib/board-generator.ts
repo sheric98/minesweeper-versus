@@ -1,10 +1,5 @@
 import { ROWS, COLS, MINE_COUNT, Board, createEmptyBoard } from "./minesweeper";
-import { isSolvable } from "./solver";
-
-interface SolverBoard {
-  isMine: boolean;
-  adjacentMines: number;
-}
+import { isSolvable, SolverBoard } from "./solver";
 
 function generateRandomBoard(startRow: number, startCol: number): SolverBoard[][] {
   // Build safe zone around starting square (the cell + all 8 neighbors)

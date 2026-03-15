@@ -1,33 +1,16 @@
-import { ROWS, COLS, MINE_COUNT } from "./minesweeper";
+export type Cell = [number, number];
+export type CellKey = string;
 
-type Cell = [number, number];
-type CellKey = string;
-
-function cellKey(r: number, c: number): CellKey {
+export function cellKey(r: number, c: number): CellKey {
   return `${r},${c}`;
 }
 
-function parseKey(key: CellKey): Cell {
+export function parseKey(key: CellKey): Cell {
   const [r, c] = key.split(",").map(Number);
   return [r, c];
 }
 
-function neighbors(r: number, c: number): Cell[] {
-  const result: Cell[] = [];
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue;
-      const nr = r + dr;
-      const nc = c + dc;
-      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-        result.push([nr, nc]);
-      }
-    }
-  }
-  return result;
-}
-
-function* combinations(arr: number[], k: number): Generator<number[]> {
+export function* combinations(arr: number[], k: number): Generator<number[]> {
   if (k === 0) {
     yield [];
     return;
@@ -39,7 +22,7 @@ function* combinations(arr: number[], k: number): Generator<number[]> {
   }
 }
 
-class MineGroup {
+export class MineGroup {
   cells: Set<CellKey>;
   mines: number;
 
@@ -71,7 +54,7 @@ class MineGroup {
   }
 }
 
-class ConnectedMineGroup {
+export class ConnectedMineGroup {
   relevantCells: Set<CellKey> = new Set();
   subgroupsMap: Map<CellKey, Set<MineGroup>> = new Map();
   numGroups = 0;
@@ -114,7 +97,7 @@ class ConnectedMineGroup {
     }
   }
 
-  private _isSubsetOfExistingGroup(group: MineGroup): MineGroup | null {
+  _isSubsetOfExistingGroup(group: MineGroup): MineGroup | null {
     for (const cell of group.cells) {
       const existing = this.subgroupsMap.get(cell);
       if (!existing) continue;
@@ -127,7 +110,7 @@ class ConnectedMineGroup {
     return null;
   }
 
-  private _splitGroup(a: MineGroup, b: MineGroup): [MineGroup, MineGroup] {
+  _splitGroup(a: MineGroup, b: MineGroup): [MineGroup, MineGroup] {
     let subset: MineGroup, superset: MineGroup;
     if (isProperSubset(a.cells, b.cells)) {
       subset = a;
@@ -384,7 +367,7 @@ class ConnectedMineGroup {
   }
 }
 
-function isProperSubset(a: Set<CellKey>, b: Set<CellKey>): boolean {
+export function isProperSubset(a: Set<CellKey>, b: Set<CellKey>): boolean {
   if (a.size >= b.size) return false;
   for (const item of a) {
     if (!b.has(item)) return false;
@@ -392,7 +375,7 @@ function isProperSubset(a: Set<CellKey>, b: Set<CellKey>): boolean {
   return true;
 }
 
-function mergeDisjointedConnectedGroups(groups: ConnectedMineGroup[]): ConnectedMineGroup {
+export function mergeDisjointedConnectedGroups(groups: ConnectedMineGroup[]): ConnectedMineGroup {
   const merged = new ConnectedMineGroup();
   for (const group of groups) {
     for (const cell of group.relevantCells) merged.relevantCells.add(cell);
@@ -409,174 +392,40 @@ function mergeDisjointedConnectedGroups(groups: ConnectedMineGroup[]): Connected
   return merged;
 }
 
-interface SolverBoard {
+export interface SolverBoard {
   isMine: boolean;
   adjacentMines: number;
 }
 
-export function isSolvable(board: SolverBoard[][], startRow: number, startCol: number): boolean {
-  const state: (string | number)[][] = Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => "unknown")
-  );
-  const totalSafe = ROWS * COLS - MINE_COUNT;
-  let revealedCount = 0;
-  let remainingMines = MINE_COUNT;
+export abstract class Solver {
+  protected readonly height: number;
+  protected readonly width: number;
+  protected readonly numMines: number;
 
-  const connectedGroups = new Map<CellKey, ConnectedMineGroup>();
-  let allGroups = new Set<ConnectedMineGroup>();
-  const tilesWithoutInformation = new Set<CellKey>();
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      tilesWithoutInformation.add(cellKey(r, c));
-    }
+  constructor(height: number, width: number, numMines: number) {
+    this.height = height;
+    this.width = width;
+    this.numMines = numMines;
   }
 
-  function revealSingle(r: number, c: number): void {
-    if (state[r][c] !== "unknown") return;
-    state[r][c] = board[r][c].adjacentMines;
-    const key = cellKey(r, c);
-    tilesWithoutInformation.delete(key);
-    revealedCount++;
-    const cg = connectedGroups.get(key);
-    if (cg) cg.markSafe(key);
+  protected neighbors(r: number, c: number): Cell[] {
+    const result: Cell[] = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < this.height && nc >= 0 && nc < this.width) {
+          result.push([nr, nc]);
+        }
+      }
+    }
+    return result;
   }
 
-  function reveal(r: number, c: number): CellKey[] {
-    const queue: Cell[] = [[r, c]];
-    const revealed: CellKey[] = [];
-    while (queue.length > 0) {
-      const [rr, cc] = queue.shift()!;
-      if (state[rr][cc] !== "unknown") continue;
-      revealSingle(rr, cc);
-      revealed.push(cellKey(rr, cc));
-      if (board[rr][cc].adjacentMines === 0) {
-        for (const [nr, nc] of neighbors(rr, cc)) {
-          if (state[nr][nc] === "unknown") queue.push([nr, nc]);
-        }
-      }
-    }
-    return revealed;
+  protected isValid(r: number, c: number): boolean {
+    return r >= 0 && r < this.height && c >= 0 && c < this.width;
   }
 
-  function markMine(r: number, c: number): void {
-    const key = cellKey(r, c);
-    tilesWithoutInformation.delete(key);
-    state[r][c] = "mine";
-    remainingMines--;
-    const cg = connectedGroups.get(key);
-    if (cg) cg.markMine(key);
-  }
-
-  // Initial reveal
-  let revealed = reveal(startRow, startCol);
-
-  // Main solving loop
-  while (revealed.length > 0) {
-    // Remove empty connected groups
-    allGroups = new Set(Array.from(allGroups).filter(g => !g.isEmpty()));
-
-    // Optimize subgroups
-    for (const group of Array.from(allGroups)) {
-      group.reassessForSubsets();
-    }
-
-    // Update connected groups with constraints from newly revealed cells
-    for (const key of revealed) {
-      const [r, c] = parseKey(key);
-      if (state[r][c] === 0) continue;
-
-      const unknownNeighbors = new Set<CellKey>();
-      for (const [nr, nc] of neighbors(r, c)) {
-        if (state[nr][nc] === "unknown") unknownNeighbors.add(cellKey(nr, nc));
-      }
-      if (unknownNeighbors.size === 0) continue;
-
-      for (const nk of unknownNeighbors) {
-        tilesWithoutInformation.delete(nk);
-      }
-
-      let mineCount = 0;
-      for (const [nr, nc] of neighbors(r, c)) {
-        if (state[nr][nc] === "mine") mineCount++;
-      }
-      const mineGroup = new MineGroup(unknownNeighbors, (state[r][c] as number) - mineCount);
-
-      // Deduplicate relevant connected groups
-      const relevantSet = new Set<ConnectedMineGroup>();
-      for (const cell of unknownNeighbors) {
-        const cg = connectedGroups.get(cell);
-        if (cg) relevantSet.add(cg);
-      }
-      const relevantConnectedGroups = Array.from(relevantSet);
-
-      if (relevantConnectedGroups.length === 0) {
-        const newGroup = new ConnectedMineGroup();
-        newGroup.addGroup(mineGroup);
-        for (const cell of unknownNeighbors) {
-          connectedGroups.set(cell, newGroup);
-        }
-        allGroups.add(newGroup);
-      } else if (relevantConnectedGroups.length === 1) {
-        relevantConnectedGroups[0].addGroup(mineGroup);
-        for (const cell of unknownNeighbors) {
-          connectedGroups.set(cell, relevantConnectedGroups[0]);
-        }
-      } else {
-        const mergedGroup = mergeDisjointedConnectedGroups(relevantConnectedGroups);
-        mergedGroup.addGroup(mineGroup);
-        for (const cell of mergedGroup.relevantCells) {
-          connectedGroups.set(cell, mergedGroup);
-        }
-        allGroups.add(mergedGroup);
-        for (const group of relevantConnectedGroups) {
-          allGroups.delete(group);
-        }
-      }
-    }
-
-    // Split any connected groups that have become disjoint
-    const newAllGroups = new Set<ConnectedMineGroup>();
-    for (const group of allGroups) {
-      for (const component of group.splitIfDisjoint()) {
-        newAllGroups.add(component);
-        for (const cell of component.relevantCells) {
-          connectedGroups.set(cell, component);
-        }
-      }
-    }
-    allGroups = newAllGroups;
-
-    // Solve groups to find new safe/mine cells
-    const toReveal = new Set<CellKey>();
-    const toMarkMine = new Set<CellKey>();
-    let maxMinesUsed = 0;
-    for (const group of allGroups) {
-      const { safeCells, mineCells, maxMinesUsed: groupMax } = group.solveGroups(remainingMines);
-      for (const c of safeCells) toReveal.add(c);
-      for (const c of mineCells) toMarkMine.add(c);
-      maxMinesUsed += groupMax;
-    }
-
-    const minMinesRemaining = remainingMines - maxMinesUsed;
-    if (minMinesRemaining === tilesWithoutInformation.size) {
-      for (const cell of tilesWithoutInformation) toMarkMine.add(cell);
-    }
-
-    for (const key of toMarkMine) {
-      const [r, c] = parseKey(key);
-      markMine(r, c);
-    }
-
-    const allRevealed = new Set<CellKey>();
-    for (const key of toReveal) {
-      const [r, c] = parseKey(key);
-      for (const rk of reveal(r, c)) {
-        allRevealed.add(rk);
-      }
-    }
-
-    revealed = Array.from(allRevealed);
-  }
-
-  return revealedCount === totalSafe;
+  abstract findSolvedSquares(revealedCells: Map<string, number>): [number, number][];
 }
