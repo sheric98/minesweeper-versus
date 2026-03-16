@@ -145,6 +145,32 @@ describe("PerfectSolver.findSolvedSquares", () => {
     expect(safeCells).toHaveLength(0);
   });
 
+  it("uses global mine count to prune permutations and find safe cells", () => {
+    // 2x3 board, 1 mine at (0,1)
+    // Row 0: [_, M, _]     (unrevealed)
+    // Row 1: [1, ?, 1]     (reveal (1,0) and (1,2), NOT (1,1))
+    //
+    // Constraints:
+    //   (1,0)=1 → unknowns {(0,0), (0,1), (1,1)}, 1 mine
+    //   (1,2)=1 → unknowns {(0,1), (0,2), (1,1)}, 1 mine
+    //
+    // Groups overlap at {(0,1), (1,1)} but neither is a proper subset → subset deduction fails.
+    // With global mine count = 1, the permutation where (0,0)=mine requires (0,2)=mine too
+    // (2 mines total > 1 remaining) → pruned. Only valid permutations have the mine at
+    // (0,1) or (1,1), so (0,0) and (0,2) are always safe.
+    const solver = new PerfectSolver(2, 3, 1);
+
+    const revealed = new Map<string, number>();
+    revealed.set("1,0", 1);
+    revealed.set("1,2", 1);
+
+    const safeCells = solver.findSolvedSquares(revealed);
+    const safeKeys = safeCells.map(([r, c]) => `${r},${c}`);
+
+    expect(safeKeys).toContain("0,0");
+    expect(safeKeys).toContain("0,2");
+  });
+
   it("handles multiple rounds of deduction", () => {
     // 5x1 board: [_, _, start, _, mine]
     // Reveal cell 2 (adjacentMines=0), which should flood-fill to neighbors

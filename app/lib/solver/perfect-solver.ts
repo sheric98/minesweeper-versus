@@ -18,7 +18,7 @@ export class PerfectSolver extends Solver {
   private revealedCells = new Set<CellKey>();
   private mineCells = new Set<CellKey>();
 
-  constructor(height: number, width: number, numMines: number) {
+  constructor(height: number, width: number, numMines: number, protected useGlobalMineCount = true) {
     super(height, width, numMines);
     this.remainingMines = numMines;
 
@@ -118,7 +118,7 @@ export class PerfectSolver extends Solver {
     const toMarkMine = new Set<CellKey>();
     let maxMinesUsed = 0;
     for (const group of this.allGroups) {
-      const { safeCells, mineCells, maxMinesUsed: groupMax } = group.solveGroups(this.remainingMines);
+      const { safeCells, mineCells, maxMinesUsed: groupMax } = group.solveGroups(this.useGlobalMineCount ? this.remainingMines : Infinity);
       for (const c of safeCells) {
         toReveal.push(parseKey(c));
       }
@@ -127,9 +127,11 @@ export class PerfectSolver extends Solver {
     }
 
     // 6. Check global mine constraint on unconstrained tiles
-    const minMinesRemaining = this.remainingMines - maxMinesUsed;
-    if (minMinesRemaining === this.tilesWithoutInformation.size) {
-      for (const cell of this.tilesWithoutInformation) toMarkMine.add(cell);
+    if (this.useGlobalMineCount) {
+      const minMinesRemaining = this.remainingMines - maxMinesUsed;
+      if (minMinesRemaining === this.tilesWithoutInformation.size) {
+        for (const cell of this.tilesWithoutInformation) toMarkMine.add(cell);
+      }
     }
 
     // 7. Process deduced mines internally
@@ -143,6 +145,12 @@ export class PerfectSolver extends Solver {
 
     // 8. Return safe cells
     return toReveal;
+  }
+}
+
+export class ProbabilisticSolver extends PerfectSolver {
+  constructor(height: number, width: number, numMines: number) {
+    super(height, width, numMines, false);
   }
 }
 
