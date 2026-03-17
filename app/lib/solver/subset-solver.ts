@@ -22,7 +22,7 @@ export class SubsetSolver extends Solver {
 
       // 1. Build MineGroups + cell index from all revealed cells
       let groups: MineGroup[] = [];
-      let cellToGroups = new Map<CellKey, MineGroup[]>();
+      const cellToGroups = new Map<CellKey, MineGroup[]>();
 
       for (const [key, adjacentMines] of this.revealedCells) {
         const [r, c] = parseKey(key);
