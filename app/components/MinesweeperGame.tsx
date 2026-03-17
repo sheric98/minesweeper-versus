@@ -21,6 +21,7 @@ import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import Leaderboard from "@/app/components/Leaderboard";
+import DifficultySelector, { type NoGuessDifficulty } from "@/app/components/DifficultySelector";
 
 type GameMode = "random" | "no-guess";
 
@@ -62,6 +63,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [difficulty, setDifficulty] = useState<NoGuessDifficulty>("beginner");
   const scoreSubmittedRef = useRef(false);
   const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -169,6 +171,14 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   }, []);
 
   const handleReset = useCallback(() => {
+    setBoard(createEmptyBoard());
+    setPhase("idle");
+    setElapsedSeconds(0);
+    scoreSubmittedRef.current = false;
+  }, []);
+
+  const handleDifficultyChange = useCallback((d: NoGuessDifficulty) => {
+    setDifficulty(d);
     setBoard(createEmptyBoard());
     setPhase("idle");
     setElapsedSeconds(0);
@@ -300,6 +310,12 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   return (
     <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 select-none">
       <div className="flex flex-col items-center gap-0">
+        {mode === "no-guess" && (
+          <DifficultySelector
+            difficulty={difficulty}
+            onDifficultyChange={handleDifficultyChange}
+          />
+        )}
         <Header
           flagsRemaining={flagsRemaining}
           elapsedSeconds={elapsedSeconds}
