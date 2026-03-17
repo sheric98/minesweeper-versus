@@ -156,14 +156,18 @@ const DIFFICULTY_SOLVERS: Record<NoGuessDifficulty, { target: SolverFactory; low
   },
 };
 
-export function generateSolvableBoard(startRow: number, startCol: number, difficulty: NoGuessDifficulty = "expert", maxAttempts = 1000): SolvableBoardResult {
+export function generateSolvableBoard(startRow: number, startCol: number, difficulty: NoGuessDifficulty = "expert", maxAttempts = Infinity): SolvableBoardResult {
   const { target, lower } = DIFFICULTY_SOLVERS[difficulty];
+  const t0 = performance.now();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const board = generateRandomBoard(startRow, startCol);
 
     if (!isSolvableBy(board, startRow, startCol, target())) continue;
     if (lower && isSolvableBy(board, startRow, startCol, lower())) continue;
+
+    const elapsed = (performance.now() - t0).toFixed(1);
+    console.log(`[board-gen] ${difficulty}: found in ${attempt + 1} attempts, ${elapsed}ms`);
 
     return {
       board: toGameBoard(board),
