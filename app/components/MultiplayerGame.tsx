@@ -23,6 +23,7 @@ import useWebSocket from "@/app/lib/useWebSocket";
 const useMultiplayerSocket = process.env.NEXT_PUBLIC_WS_URL
   ? useWebSocket
   : useMockWebSocket;
+import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import OpponentBoard from "@/app/components/OpponentBoard";
@@ -631,12 +632,12 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           {/* Player progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
             <span className="w-24 text-right truncate font-bold text-blue-500">You</span>
-            <div className="flex-1 h-7 bg-[#333333] border border-[#222222] relative">
+            <div className={`flex-1 h-7 bg-[#c0c0c0] ${SUNKEN_INNER} relative`}>
               <div
-                className="h-full bg-blue-400 transition-all duration-300"
+                className="h-full bg-blue-500 transition-all duration-300"
                 style={{ width: `${(playerRevealedCount / TOTAL_SAFE_CELLS) * 100}%` }}
               />
-              <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+              <span className="absolute inset-0 flex items-center justify-center text-black font-bold text-xs">
                 {Math.round((playerRevealedCount / TOTAL_SAFE_CELLS) * 100)}%
               </span>
             </div>
@@ -644,12 +645,12 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           {/* Opponent progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
             <span className="w-24 text-right truncate font-bold text-rose-500">{opponentName || "Opponent"}</span>
-            <div className="flex-1 h-7 bg-[#333333] border border-[#222222] relative">
+            <div className={`flex-1 h-7 bg-[#c0c0c0] ${SUNKEN_INNER} relative`}>
               <div
-                className="h-full bg-rose-400 transition-all duration-300"
+                className="h-full bg-rose-500 transition-all duration-300"
                 style={{ width: `${(opponentRevealedCount / TOTAL_SAFE_CELLS) * 100}%` }}
               />
-              <span className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+              <span className="absolute inset-0 flex items-center justify-center text-black font-bold text-xs">
                 {Math.round((opponentRevealedCount / TOTAL_SAFE_CELLS) * 100)}%
               </span>
             </div>

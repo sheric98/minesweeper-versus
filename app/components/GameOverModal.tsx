@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { RAISED_OUTER } from "@/app/lib/win95";
 
-const RAISED = "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080] border-r-[#808080]";
+const RAISED = RAISED_OUTER;
 const BUTTON = `${RAISED} bg-ms-silver px-4 py-1 text-sm font-bold cursor-default active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`;
 
 export type RematchState = "idle" | "requested" | "waiting" | "declined";

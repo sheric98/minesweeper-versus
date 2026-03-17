@@ -1,4 +1,5 @@
 import { GamePhase, COLS } from "@/app/lib/minesweeper";
+import { RAISED_INNER, SUNKEN_INNER } from "@/app/lib/win95";
 
 const FACE: Record<GamePhase, string> = {
   idle: "🙂",
@@ -19,8 +20,8 @@ interface HeaderProps {
   accentColor?: "blue" | "red";
 }
 
-const RAISED = "border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]";
-const SUNKEN_PANEL = "border-2 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]";
+const RAISED = RAISED_INNER;
+const SUNKEN_PANEL = SUNKEN_INNER;
 
 const ACCENT_STYLES = {
   blue: "bg-slate-300 border-t-slate-200 border-l-slate-200 border-b-slate-500 border-r-slate-500",

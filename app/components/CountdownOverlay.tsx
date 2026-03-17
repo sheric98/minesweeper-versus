@@ -1,4 +1,6 @@
-const RAISED = "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080] border-r-[#808080]";
+import { RAISED_OUTER } from "@/app/lib/win95";
+
+const RAISED = RAISED_OUTER;
 
 interface CountdownOverlayProps {
   seconds: number; // 5 down to 0; 0 = "GO!"

@@ -10,11 +10,11 @@ interface Props {
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
 
-// Full class strings (no template literals) so Tailwind v4's scanner detects them.
-// Convention matches RAISED/SUNKEN constants used in Cell.tsx and Header.tsx.
-const RAISED = "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080] border-r-[#808080]";
-const SUNKEN = "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
-const PRESSED = "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
+import { RAISED_OUTER, SUNKEN_OUTER, PRESSED as WIN95_PRESSED } from "@/app/lib/win95";
+
+const RAISED = RAISED_OUTER;
+const SUNKEN = SUNKEN_OUTER;
+const PRESSED = WIN95_PRESSED;
 
 export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
   const router = useRouter();

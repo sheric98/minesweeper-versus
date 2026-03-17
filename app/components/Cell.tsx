@@ -1,5 +1,6 @@
 import React from "react";
 import { Cell as CellType } from "@/app/lib/minesweeper";
+import { RAISED_INNER } from "@/app/lib/win95";
 
 const NUMBER_COLORS: Record<number, string> = {
   1: "text-blue-700",
@@ -12,7 +13,7 @@ const NUMBER_COLORS: Record<number, string> = {
   8: "text-gray-500",
 };
 
-const RAISED = "border-2 border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]";
+const RAISED = RAISED_INNER;
 const SUNKEN = "border border-[#b0b0b0]";
 
 interface CellProps {

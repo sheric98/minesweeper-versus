@@ -17,6 +17,7 @@ import {
   chordReveal,
 } from "@/app/lib/minesweeper";
 import { generateSolvableBoard } from "@/app/lib/board-generator";
+import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import Leaderboard from "@/app/components/Leaderboard";
@@ -297,7 +298,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const flagsRemaining = MINE_COUNT - countFlags(board);
 
   return (
-    <div className="flex flex-row items-start gap-4 select-none">
+    <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 select-none">
       <div className="flex flex-col items-center gap-0">
         <Header
           flagsRemaining={flagsRemaining}
@@ -316,18 +317,20 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
           onBoardMouseDown={handleBoardMouseDown}
           onBoardMouseUp={handleBoardMouseUp}
         />
-        <p className="mt-2 font-mono font-bold h-5">
-          {isGenerating && <span className="text-[#808080]">Generating board...</span>}
-          {!isGenerating && phase === "won" && (
-            <>
-              <span className="text-green-700">You win!</span>
-              {authLevel !== "google" && (
-                <span className="text-[#808080] text-xs ml-2">Sign in to save scores</span>
-              )}
-            </>
-          )}
-          {!isGenerating && phase === "lost" && <span className="text-red-700">Game over.</span>}
-        </p>
+        {(isGenerating || phase === "won" || phase === "lost") && (
+          <div className={`${SUNKEN_INNER} bg-black mt-2 px-4 py-1.5 font-mono font-bold text-center`}>
+            {isGenerating && <span className="text-[#808080]">Generating board...</span>}
+            {!isGenerating && phase === "won" && (
+              <>
+                <span className="text-green-500">You win!</span>
+                {authLevel !== "google" && (
+                  <span className="text-[#808080] text-xs ml-2">Sign in to save scores</span>
+                )}
+              </>
+            )}
+            {!isGenerating && phase === "lost" && <span className="text-red-500">Game over.</span>}
+          </div>
+        )}
       </div>
       <Leaderboard username={username} refreshKey={leaderboardRefreshKey} mode={mode} />
     </div>

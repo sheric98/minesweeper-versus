@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { RAISED_OUTER, SUNKEN_OUTER, PRESSED as WIN95_PRESSED } from "@/app/lib/win95";
+
 // ── Win95 border helpers ─────────────────────────────────────────────
-const RAISED =
-  "border-2 border-t-[#ffffff] border-l-[#ffffff] border-b-[#808080] border-r-[#808080]";
-const SUNKEN =
-  "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
-const PRESSED =
-  "border-2 border-t-[#808080] border-l-[#808080] border-b-[#ffffff] border-r-[#ffffff]";
+const RAISED = RAISED_OUTER;
+const SUNKEN = SUNKEN_OUTER;
+const PRESSED = WIN95_PRESSED;
 
 // ── Types ────────────────────────────────────────────────────────────
 interface Player {
