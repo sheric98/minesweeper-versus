@@ -135,7 +135,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         setIsGenerating(true);
         // Use setTimeout to let the UI update before the CPU-intensive generation
         setTimeout(() => {
-          const result = generateSolvableBoard(row, col);
+          const result = generateSolvableBoard(row, col, difficulty);
           const revealed = revealCell(result.board, row, col);
           setBoard(revealed);
           setPhase("playing");
@@ -162,7 +162,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     if (checkWin(nextBoard)) {
       setPhase("won");
     }
-  }, [mode]);
+  }, [mode, difficulty]);
 
   const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();

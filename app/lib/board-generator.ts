@@ -1,5 +1,6 @@
 import { ROWS, COLS, MINE_COUNT, Board, createEmptyBoard } from "./minesweeper";
-import { isSolvable, SolverBoard } from "./solver";
+import { cellKey, type Cell, type SolverBoard, Solver, PerfectSolver, ProbabilisticSolver, BasicSolver, SubsetSolver } from "./solver";
+import type { NoGuessDifficulty } from "@/app/components/DifficultySelector";
 
 function generateRandomBoard(startRow: number, startCol: number): SolverBoard[][] {
   // Build safe zone around starting square (the cell + all 8 neighbors)
@@ -80,15 +81,94 @@ export interface SolvableBoardResult {
   startingSquare: { row: number; col: number };
 }
 
-export function generateSolvableBoard(startRow: number, startCol: number, maxAttempts = 1000): SolvableBoardResult {
+function isSolvableBy(board: SolverBoard[][], startRow: number, startCol: number, solver: Solver): boolean {
+  const height = board.length;
+  const width = board[0].length;
+  const numMines = board.flat().filter(c => c.isMine).length;
+  const totalSafe = height * width - numMines;
+
+  const state: (string | number)[][] = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => "unknown")
+  );
+  let revealedCount = 0;
+
+  function revealFloodFill(r: number, c: number): Map<string, number> {
+    const queue: Cell[] = [[r, c]];
+    const revealed = new Map<string, number>();
+    while (queue.length > 0) {
+      const [rr, cc] = queue.shift()!;
+      if (state[rr][cc] !== "unknown") continue;
+      state[rr][cc] = board[rr][cc].adjacentMines;
+      revealedCount++;
+      revealed.set(cellKey(rr, cc), board[rr][cc].adjacentMines);
+      if (board[rr][cc].adjacentMines === 0) {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = rr + dr;
+            const nc = cc + dc;
+            if (nr >= 0 && nr < height && nc >= 0 && nc < width && state[nr][nc] === "unknown") {
+              queue.push([nr, nc]);
+            }
+          }
+        }
+      }
+    }
+    return revealed;
+  }
+
+  let newlyRevealed = revealFloodFill(startRow, startCol);
+
+  while (newlyRevealed.size > 0) {
+    const safeCells = solver.findSolvedSquares(newlyRevealed);
+
+    const allRevealed = new Map<string, number>();
+    for (const [r, c] of safeCells) {
+      const revealed = revealFloodFill(r, c);
+      for (const [key, val] of revealed) {
+        allRevealed.set(key, val);
+      }
+    }
+
+    newlyRevealed = allRevealed;
+  }
+
+  return revealedCount === totalSafe;
+}
+
+type SolverFactory = () => Solver;
+
+const DIFFICULTY_SOLVERS: Record<NoGuessDifficulty, { target: SolverFactory; lower?: SolverFactory }> = {
+  beginner: {
+    target: () => new BasicSolver(ROWS, COLS),
+  },
+  intermediate: {
+    target: () => new SubsetSolver(ROWS, COLS),
+    lower: () => new BasicSolver(ROWS, COLS),
+  },
+  advanced: {
+    target: () => new ProbabilisticSolver(ROWS, COLS, MINE_COUNT),
+    lower: () => new SubsetSolver(ROWS, COLS),
+  },
+  expert: {
+    target: () => new PerfectSolver(ROWS, COLS, MINE_COUNT),
+    lower: () => new ProbabilisticSolver(ROWS, COLS, MINE_COUNT),
+  },
+};
+
+export function generateSolvableBoard(startRow: number, startCol: number, difficulty: NoGuessDifficulty = "expert", maxAttempts = 1000): SolvableBoardResult {
+  const { target, lower } = DIFFICULTY_SOLVERS[difficulty];
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const board = generateRandomBoard(startRow, startCol);
-    if (isSolvable(board, startRow, startCol)) {
-      return {
-        board: toGameBoard(board),
-        startingSquare: { row: startRow, col: startCol },
-      };
-    }
+
+    if (!isSolvableBy(board, startRow, startCol, target())) continue;
+    if (lower && isSolvableBy(board, startRow, startCol, lower())) continue;
+
+    return {
+      board: toGameBoard(board),
+      startingSquare: { row: startRow, col: startCol },
+    };
   }
 
   // Fallback (extremely unlikely)
