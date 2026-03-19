@@ -18,19 +18,22 @@ interface LeaderboardProps {
   username?: string;
   refreshKey: number;
   mode?: LeaderboardMode;
+  difficulty?: string;
 }
 
-export default function Leaderboard({ username, refreshKey, mode = "random" }: LeaderboardProps) {
+export default function Leaderboard({ username, refreshKey, mode = "random", difficulty }: LeaderboardProps) {
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
-    fetch(`/api/leaderboard?mode=${mode}`)
+    let url = `/api/leaderboard?mode=${mode}`;
+    if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (data.scores) setScores(data.scores);
       })
       .catch(() => {});
-  }, [refreshKey, mode]);
+  }, [refreshKey, mode, difficulty]);
 
   return (
     <div className={`${RAISED} bg-[#c0c0c0] p-2 w-56 flex-shrink-0`}>

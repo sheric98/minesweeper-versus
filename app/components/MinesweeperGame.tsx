@@ -82,7 +82,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     isGeneratingRef.current = isGenerating;
   });
 
-  const showLeaderboard = mode === "random" || (mode === "no-guess" && difficulty === "expert");
+  const showLeaderboard = mode === "random" || mode === "no-guess";
 
   // Submit score on win
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
       fetch("/api/leaderboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ time_seconds: elapsedSeconds, mode }),
+        body: JSON.stringify({ time_seconds: elapsedSeconds, mode, ...(mode === "no-guess" && { difficulty }) }),
       })
         .then(() => setLeaderboardRefreshKey((k) => k + 1))
         .catch(() => {});
@@ -351,7 +351,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         )}
       </div>
       {showLeaderboard && (
-        <Leaderboard username={username} refreshKey={leaderboardRefreshKey} mode={mode} />
+        <Leaderboard username={username} refreshKey={leaderboardRefreshKey} mode={mode} difficulty={mode === "no-guess" ? difficulty : undefined} />
       )}
     </div>
   );

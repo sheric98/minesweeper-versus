@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const mode = request.nextUrl.searchParams.get("mode") || "random";
+  const difficulty = request.nextUrl.searchParams.get("difficulty");
   const backendUrl = process.env.BACKEND_URL;
 
   if (!backendUrl) {
@@ -15,7 +16,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let backendRes: Response;
   try {
-    backendRes = await fetch(`${backendUrl}/leaderboard?mode=${encodeURIComponent(mode)}`, { cache: "no-store" });
+    let url = `${backendUrl}/leaderboard?mode=${encodeURIComponent(mode)}`;
+    if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
+    backendRes = await fetch(url, { cache: "no-store" });
   } catch (err) {
     console.error("[leaderboard] Backend unreachable:", err);
     return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
