@@ -17,6 +17,7 @@ import {
   chordReveal,
 } from "@/app/lib/minesweeper";
 import { generateSolvableBoard } from "@/app/lib/board-generator";
+import { decodeBoard } from "@/app/lib/multiplayer-utils";
 import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
@@ -133,17 +134,41 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     if (currentPhase === "idle") {
       if (mode === "no-guess") {
         setIsGenerating(true);
-        // Use setTimeout to let the UI update before the CPU-intensive generation
-        setTimeout(() => {
-          const result = generateSolvableBoard(row, col, difficulty);
-          const revealed = revealCell(result.board, row, col);
+        let resolved = false;
+
+        const applyBoard = (board: Board) => {
+          if (resolved) return;
+          resolved = true;
+          const revealed = revealCell(board, row, col);
           setBoard(revealed);
           setPhase("playing");
           setIsGenerating(false);
           if (checkWin(revealed)) {
             setPhase("won");
           }
+        };
+
+        // Local generation (starts immediately)
+        setTimeout(() => {
+          const result = generateSolvableBoard(row, col, difficulty);
+          applyBoard(result.board);
         }, 0);
+
+        // Server fallback (fires after 500ms)
+        setTimeout(() => {
+          if (resolved) return;
+          fetch(`/api/board?difficulty=${encodeURIComponent(difficulty)}&start_row=${row}&start_col=${col}`)
+            .then(res => {
+              if (!res.ok) throw new Error("Server error");
+              return res.json();
+            })
+            .then(data => {
+              applyBoard(decodeBoard(data.board));
+            })
+            .catch(() => {
+              // Ignore — local generation will handle it
+            });
+        }, 500);
         return;
       }
       workingBoard = generateBoard(row, col);
