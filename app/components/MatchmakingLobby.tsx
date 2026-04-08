@@ -13,7 +13,7 @@ const PRESSED = WIN95_PRESSED;
 // ── Types ────────────────────────────────────────────────────────────
 interface Player {
   username: string;
-  status: "online" | "in_game";
+  status: "online" | "in_game" | "queued";
 }
 
 interface Invite {
@@ -40,6 +40,9 @@ export default function MatchmakingLobby() {
   const [busy, setBusy] = useState<string | null>(null); // username or inviteId being acted on
   const [eloMap, setEloMap] = useState<Record<string, number>>({});
   const [myElo, setMyElo] = useState<number | null>(null);
+  const [queueStatus, setQueueStatus] = useState<"none" | "waiting">("none");
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  const [queueBusy, setQueueBusy] = useState(false);
 
   // Refs for stable polling callbacks
   const sentInviteRef = useRef(sentInvite);
@@ -49,9 +52,11 @@ export default function MatchmakingLobby() {
 
   // Mock simulation timeouts — cleared on unmount or cancel
   const mockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     return () => {
       if (mockTimerRef.current) clearTimeout(mockTimerRef.current);
+      if (queuePollRef.current) clearInterval(queuePollRef.current);
     };
   }, []);
 
@@ -230,6 +235,72 @@ export default function MatchmakingLobby() {
     }
   }
 
+  // ── Queue matchmaking ─────────────────────────────────────────────
+  function stopQueuePoll() {
+    if (queuePollRef.current) {
+      clearInterval(queuePollRef.current);
+      queuePollRef.current = null;
+    }
+  }
+
+  const pollQueueStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/matchmaking/queue/status");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (data.status === "matched") {
+        setQueueStatus("none");
+        setWaitSeconds(0);
+        stopQueuePoll();
+        router.push(`/multiplayer/game?matchId=${data.matchId}`);
+        return;
+      }
+      if (data.status === "waiting") {
+        setQueueStatus("waiting");
+        setWaitSeconds(data.waitSeconds ?? 0);
+      } else {
+        // "none" — removed from queue externally (e.g. accepted invite)
+        setQueueStatus("none");
+        setWaitSeconds(0);
+        stopQueuePoll();
+      }
+    } catch { /* silent */ }
+  }, [router]);
+
+  async function handleJoinQueue() {
+    setQueueBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/matchmaking/queue/join", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Failed to join queue.");
+        return;
+      }
+      setQueueStatus("waiting");
+      setWaitSeconds(0);
+      pollQueueStatus();
+      queuePollRef.current = setInterval(pollQueueStatus, 2000);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setQueueBusy(false);
+    }
+  }
+
+  async function handleLeaveQueue() {
+    setQueueBusy(true);
+    setError(null);
+    try {
+      await fetch("/api/matchmaking/queue/leave", { method: "POST" });
+    } catch { /* silent */ }
+    setQueueStatus("none");
+    setWaitSeconds(0);
+    stopQueuePoll();
+    setQueueBusy(false);
+  }
+
   // ── Render ───────────────────────────────────────────────────────
   return (
     <div
@@ -247,6 +318,32 @@ export default function MatchmakingLobby() {
             Your Elo: <span className="font-bold text-black">{myElo}</span>
           </div>
         )}
+        {/* ── Queue matchmaking ────────────────────────────────────── */}
+        {queueStatus === "none" ? (
+          <button
+            onClick={handleJoinQueue}
+            disabled={queueBusy}
+            className={`${RAISED} bg-ms-silver px-4 py-1.5 text-sm font-bold cursor-default w-full disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+          >
+            Find Match
+          </button>
+        ) : (
+          <div
+            className={`${SUNKEN} bg-white px-3 py-2 flex items-center justify-between`}
+          >
+            <span className="text-sm font-mono">
+              Searching for opponent… ({Math.floor(waitSeconds)}s)
+            </span>
+            <button
+              onClick={handleLeaveQueue}
+              disabled={queueBusy}
+              className={`${RAISED} bg-ms-silver px-3 py-0.5 text-xs font-bold cursor-default disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* Error banner */}
         {error && (
           <p className="text-red-700 text-xs bg-white px-2 py-1">{error}</p>
@@ -315,6 +412,8 @@ export default function MatchmakingLobby() {
             ) : (
               players.map((player) => {
                 const inGame = player.status === "in_game";
+                const inQueue = player.status === "queued";
+                const unavailable = inGame;
                 const invited = sentInvite?.target === player.username;
                 return (
                   <div
@@ -322,7 +421,7 @@ export default function MatchmakingLobby() {
                     className="flex items-center justify-between px-3 py-1 hover:bg-[#000080] hover:text-white group"
                   >
                     <span
-                      className={`text-sm font-mono ${inGame ? "text-ms-dark group-hover:text-gray-400" : ""}`}
+                      className={`text-sm font-mono ${unavailable ? "text-ms-dark group-hover:text-gray-400" : ""}`}
                     >
                       {player.username}
                       {eloMap[player.username] != null && (
@@ -333,8 +432,11 @@ export default function MatchmakingLobby() {
                       {inGame && (
                         <span className="text-xs ml-2 italic">(In Game)</span>
                       )}
+                      {inQueue && (
+                        <span className="text-xs ml-2 italic">(In Queue)</span>
+                      )}
                     </span>
-                    {!inGame && !invited && !sentInvite && (
+                    {!unavailable && !invited && !sentInvite && (
                       <button
                         onClick={() => handleInvite(player.username)}
                         disabled={busy === player.username}
