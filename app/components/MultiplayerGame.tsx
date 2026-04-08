@@ -13,7 +13,7 @@ import {
   countFlags,
   chordReveal,
 } from "@/app/lib/minesweeper";
-import type { MatchState, ClickLogEntry } from "@/app/lib/multiplayer-types";
+import type { MatchState, ClickLogEntry, EloChange } from "@/app/lib/multiplayer-types";
 import type { RematchState } from "@/app/components/GameOverModal";
 import { diffRevealedCells, decodeBoard, cooldownDuration } from "@/app/lib/multiplayer-utils";
 import useMockWebSocket from "@/app/lib/useMockWebSocket";
@@ -90,6 +90,9 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   const [opponentWins, setOpponentWins] = useState(0);
   const [h2hRecord, setH2hRecord] = useState<{ wins: number; losses: number } | null>(null);
   const [startingSquare, setStartingSquare] = useState<[number, number] | null>(null);
+  const [eloChange, setEloChange] = useState<EloChange | null>(null);
+  const [playerElo, setPlayerElo] = useState<number | null>(null);
+  const [opponentElo, setOpponentElo] = useState<number | null>(null);
 
   // -- Refs for stable callbacks (synced post-commit, not during render) --
   const boardRef = useRef(board);
@@ -179,6 +182,10 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
             yourTimeMs: msg.yourTimeMs,
             opponentTimeMs: msg.opponentTimeMs,
           });
+          if (msg.eloChange) {
+            setEloChange(msg.eloChange);
+            setPlayerElo(msg.eloChange.newRating);
+          }
           if (msg.winner === playerName || msg.winner === "You") {
             setPlayerWins(prev => prev + 1);
           } else {
@@ -204,6 +211,10 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
               opponentTimeMs: 0,
             });
             setPlayerWins(prev => prev + 1);
+            if (msg.eloChange) {
+              setEloChange(msg.eloChange);
+              setPlayerElo(msg.eloChange.newRating);
+            }
           }
           break;
 
@@ -231,6 +242,8 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           setStartingSquare(null);
           setRematchState("idle");
           setH2hRecord(null);
+          setEloChange(null);
+          setOpponentElo(null);
           break;
 
         case "rematch_declined":
@@ -244,6 +257,28 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   useLayoutEffect(() => {
     sendRef.current = send;
   });
+
+  // -- Fetch player's own Elo on mount --
+  useEffect(() => {
+    fetch("/api/elo/me")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.rating != null) setPlayerElo(data.rating); })
+      .catch(() => {});
+  }, []);
+
+  // -- Fetch opponent Elo when opponent is known --
+  useEffect(() => {
+    if (!opponentName) return;
+    fetch("/api/elo/leaderboard?limit=100")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.players) {
+          const found = data.players.find((p: { username: string }) => p.username === opponentName);
+          if (found) setOpponentElo(found.rating);
+        }
+      })
+      .catch(() => {});
+  }, [opponentName]);
 
   // -- Timer --
   useEffect(() => {
@@ -601,6 +636,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
             className="flex items-center justify-center px-2 py-1.5 border-4 bg-rose-200 border-t-rose-100 border-l-rose-100 border-b-rose-300 border-r-rose-300 text-sm font-bold font-mono w-full"
           >
             {opponentName || "Opponent"}
+            {opponentElo != null && <span className="font-normal text-xs ml-1">({opponentElo})</span>}
           </div>
           <div
             className={`rounded transition-shadow duration-300 ${
@@ -631,7 +667,9 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
         <div className="flex flex-col gap-2 w-full max-w-xl">
           {/* Player progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
-            <span className="w-24 text-right truncate font-bold text-blue-500">You</span>
+            <span className="w-24 text-right truncate font-bold text-blue-500">
+              You{playerElo != null && <span className="font-normal text-xs text-ms-dark"> ({playerElo})</span>}
+            </span>
             <div className={`flex-1 h-7 bg-[#c0c0c0] ${SUNKEN_INNER} relative`}>
               <div
                 className="h-full bg-blue-500 transition-all duration-300"
@@ -644,7 +682,9 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           </div>
           {/* Opponent progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
-            <span className="w-24 text-right truncate font-bold text-rose-500">{opponentName || "Opponent"}</span>
+            <span className="w-24 text-right truncate font-bold text-rose-500">
+              {opponentName || "Opponent"}{opponentElo != null && <span className="font-normal text-xs text-ms-dark"> ({opponentElo})</span>}
+            </span>
             <div className={`flex-1 h-7 bg-[#c0c0c0] ${SUNKEN_INNER} relative`}>
               <div
                 className="h-full bg-rose-500 transition-all duration-300"
@@ -674,6 +714,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           playerWins={playerWins}
           opponentWins={opponentWins}
           h2hRecord={h2hRecord}
+          eloChange={eloChange}
           rematchState={rematchState}
           onRematchRequest={handleRematchRequest}
           onRematchDecline={handleRematchDecline}

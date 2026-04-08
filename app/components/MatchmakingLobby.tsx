@@ -38,6 +38,8 @@ export default function MatchmakingLobby() {
   const [receivedInvites, setReceivedInvites] = useState<Invite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // username or inviteId being acted on
+  const [eloMap, setEloMap] = useState<Record<string, number>>({});
+  const [myElo, setMyElo] = useState<number | null>(null);
 
   // Refs for stable polling callbacks
   const sentInviteRef = useRef(sentInvite);
@@ -106,6 +108,24 @@ export default function MatchmakingLobby() {
       /* silent */
     }
   }, [router]);
+
+  // ── Fetch Elo data ───────────────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/elo/me")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.rating != null) setMyElo(data.rating); })
+      .catch(() => {});
+    fetch("/api/elo/leaderboard?limit=100")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.players) {
+          const map: Record<string, number> = {};
+          for (const p of data.players) map[p.username] = p.rating;
+          setEloMap(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // ── Polling ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -221,6 +241,12 @@ export default function MatchmakingLobby() {
       </div>
 
       <div className="px-4 py-4 flex flex-col gap-4">
+        {/* Own Elo rating */}
+        {myElo != null && (
+          <div className="font-mono text-xs text-ms-dark">
+            Your Elo: <span className="font-bold text-black">{myElo}</span>
+          </div>
+        )}
         {/* Error banner */}
         {error && (
           <p className="text-red-700 text-xs bg-white px-2 py-1">{error}</p>
@@ -299,6 +325,11 @@ export default function MatchmakingLobby() {
                       className={`text-sm font-mono ${inGame ? "text-ms-dark group-hover:text-gray-400" : ""}`}
                     >
                       {player.username}
+                      {eloMap[player.username] != null && (
+                        <span className="text-xs ml-1 text-[#808080] group-hover:text-gray-300">
+                          ({eloMap[player.username]})
+                        </span>
+                      )}
                       {inGame && (
                         <span className="text-xs ml-2 italic">(In Game)</span>
                       )}

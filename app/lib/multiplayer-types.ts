@@ -1,5 +1,12 @@
 import type { Board } from "./minesweeper";
 
+// Elo rating change sent with game results (Google-authenticated players only)
+export interface EloChange {
+  oldRating: number;
+  newRating: number;
+  change: number;
+}
+
 // WebSocket connection state (shared by mock and production hooks)
 export type ConnectionState = "connecting" | "connected" | "reconnecting" | "disconnected";
 
@@ -54,8 +61,9 @@ export type ServerMessage =
       winner: string;
       yourTimeMs: number;
       opponentTimeMs: number;
+      eloChange?: EloChange;
     }
-  | { type: "opponent_disconnected" }
+  | { type: "opponent_disconnected"; eloChange?: EloChange }
   | { type: "rematch_requested"; by: string }
   | { type: "rematch_accepted" }
   | { type: "rematch_declined" };

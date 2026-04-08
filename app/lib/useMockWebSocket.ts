@@ -153,6 +153,7 @@ export default function useMockWebSocket({
             winner: "CPU_Player",
             yourTimeMs: Date.now() - gameStartTimeRef.current,
             opponentTimeMs: Date.now() - gameStartTimeRef.current,
+            eloChange: { oldRating: 1200, newRating: 1185, change: -15 },
           });
           return;
         }
@@ -193,6 +194,7 @@ export default function useMockWebSocket({
         winner: "You",
         yourTimeMs: msg.timeMs,
         opponentTimeMs: Date.now() - gameStartTimeRef.current,
+        eloChange: { oldRating: 1200, newRating: 1225, change: 25 },
       });
     } else if (msg.type === "rematch_request") {
       // Simulate opponent accepting rematch after a short delay

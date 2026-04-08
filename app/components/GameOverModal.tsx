@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { EloChange } from "@/app/lib/multiplayer-types";
 import { RAISED_OUTER } from "@/app/lib/win95";
 
 const RAISED = RAISED_OUTER;
@@ -18,6 +19,7 @@ interface GameOverModalProps {
   playerWins: number;
   opponentWins: number;
   h2hRecord: { wins: number; losses: number } | null;
+  eloChange?: EloChange | null;
   rematchState: RematchState;
   onRematchRequest: () => void;
   onRematchDecline: () => void;
@@ -40,6 +42,7 @@ export default function GameOverModal({
   playerWins,
   opponentWins,
   h2hRecord,
+  eloChange,
   rematchState,
   onRematchRequest,
   onRematchDecline,
@@ -102,6 +105,19 @@ export default function GameOverModal({
               All-time H2H: <span className="font-bold text-blue-600">{h2hRecord.wins}</span>
               {" - "}
               <span className="font-bold text-rose-600">{h2hRecord.losses}</span>
+            </div>
+          )}
+
+          {/* Elo rating change (Google-authenticated players only) */}
+          {eloChange && (
+            <div className="text-center font-mono text-sm border-t border-[#a0a0a0] pt-2">
+              <span className="text-xs text-ms-dark">Elo: </span>
+              <span className="font-bold">{eloChange.oldRating}</span>
+              <span className="text-ms-dark"> → </span>
+              <span className="font-bold">{eloChange.newRating}</span>
+              <span className={`ml-1 font-bold ${eloChange.change >= 0 ? "text-green-700" : "text-red-700"}`}>
+                ({eloChange.change >= 0 ? "+" : ""}{eloChange.change})
+              </span>
             </div>
           )}
 
