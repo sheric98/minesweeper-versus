@@ -147,14 +147,18 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
           }
         };
 
-        // Local generation (non-blocking via setTimeout)
-        setTimeout(async () => {
-          const { generateSolvableBoard } = await import("../lib/board-generator");
-          const result = generateSolvableBoard(row, col, difficulty);
-          applyBoard(result.board);
-        }, 0);
+        // Local generation in Web Worker (non-blocking)
+        const worker = new Worker(
+          new URL("../lib/board-generator.worker.ts", import.meta.url)
+        );
+        worker.onmessage = (e) => {
+          worker.terminate();
+          applyBoard(e.data.board);
+        };
+        worker.onerror = () => worker.terminate();
+        worker.postMessage({ startRow: row, startCol: col, difficulty });
 
-        // Server fallback (fires after 500ms if local generation hasn't finished)
+        // Server fallback (fires after 500ms if worker hasn't finished)
         setTimeout(() => {
           if (resolved) return;
           fetch(`/api/board?difficulty=${encodeURIComponent(difficulty)}&start_row=${row}&start_col=${col}`)
@@ -163,10 +167,11 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
               return res.json();
             })
             .then(data => {
+              worker.terminate();
               applyBoard(decodeBoard(data.board));
             })
             .catch(() => {
-              // Ignore — local generation will handle it
+              // Ignore — worker generation will handle it
             });
         }, 500);
         return;
