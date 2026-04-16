@@ -269,14 +269,9 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
   // -- Fetch opponent Elo when opponent is known --
   useEffect(() => {
     if (!opponentName) return;
-    fetch("/api/elo/leaderboard?limit=100")
+    fetch(`/api/elo/player?username=${encodeURIComponent(opponentName)}`)
       .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.players) {
-          const found = data.players.find((p: { username: string }) => p.username === opponentName);
-          if (found) setOpponentElo(found.rating);
-        }
-      })
+      .then(data => { if (data?.rating != null) setOpponentElo(data.rating); })
       .catch(() => {});
   }, [opponentName]);
 
