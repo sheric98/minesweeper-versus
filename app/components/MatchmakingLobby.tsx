@@ -14,6 +14,7 @@ const PRESSED = WIN95_PRESSED;
 interface Player {
   username: string;
   status: "online" | "in_game" | "queued";
+  rating?: number;
 }
 
 interface Invite {
@@ -38,7 +39,6 @@ export default function MatchmakingLobby() {
   const [receivedInvites, setReceivedInvites] = useState<Invite[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // username or inviteId being acted on
-  const [eloMap, setEloMap] = useState<Record<string, number>>({});
   const [myElo, setMyElo] = useState<number | null>(null);
   const [queueStatus, setQueueStatus] = useState<"none" | "waiting">("none");
   const [waitSeconds, setWaitSeconds] = useState(0);
@@ -114,21 +114,11 @@ export default function MatchmakingLobby() {
     }
   }, [router]);
 
-  // ── Fetch Elo data ───────────────────────────────────────────────
+  // ── Fetch my Elo ──────────────────────────────────────────────────
   useEffect(() => {
     fetch("/api/elo/me")
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data?.rating != null) setMyElo(data.rating); })
-      .catch(() => {});
-    fetch("/api/elo/leaderboard?limit=100")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.players) {
-          const map: Record<string, number> = {};
-          for (const p of data.players) map[p.username] = p.rating;
-          setEloMap(map);
-        }
-      })
       .catch(() => {});
   }, []);
 
@@ -424,9 +414,9 @@ export default function MatchmakingLobby() {
                       className={`text-sm font-mono ${unavailable ? "text-ms-dark group-hover:text-gray-400" : ""}`}
                     >
                       {player.username}
-                      {eloMap[player.username] != null && (
+                      {player.rating != null && (
                         <span className="text-xs ml-1 text-[#808080] group-hover:text-gray-300">
-                          ({eloMap[player.username]})
+                          ({player.rating})
                         </span>
                       )}
                       {inGame && (
