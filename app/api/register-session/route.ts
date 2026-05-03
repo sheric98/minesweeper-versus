@@ -81,13 +81,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   // 4. Set the session cookie on the response.
   // HttpOnly: client JS cannot read the token (prevents XSS token theft).
-  // SameSite=Strict: cross-site requests cannot include this cookie (CSRF protection).
+  // SameSite=Lax: matches the Google-auth session-cookie attributes so both
+  // sign-in paths produce identical cross-site behavior.
   // secure: only sent over HTTPS; disabled in dev so localhost (HTTP) works.
   const response = NextResponse.json({ ok: true });
   response.cookies.set("session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     // Session cookie (no maxAge): expires when the browser closes.
     // For persistence across sessions, add: maxAge: 60 * 60 * 24 * 7  // 7 days

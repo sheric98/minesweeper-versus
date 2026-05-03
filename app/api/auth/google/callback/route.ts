@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo";
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
+// Must match PENDING_OAUTH_TTL_SECONDS in backend auth.py.
+const PENDING_OAUTH_TTL = 600;
 
 // Dev-only placeholder JWT for mock mode.
 function mockToken(displayName: string): string {
@@ -158,7 +160,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return redirectWithError(appUrl, "backend_error");
   }
 
-  const { token } = (await backendRes.json()) as { token: string };
+  let backendData: {
+    token?: string;
+    needs_username?: boolean;
+    pending_token?: string;
+  };
+  try {
+    backendData = (await backendRes.json()) as typeof backendData;
+  } catch {
+    console.error("[oauth/callback] Backend returned invalid JSON");
+    return redirectWithError(appUrl, "backend_error");
+  }
+
+  // New Google user — set short-lived pending cookie, redirect to chooser.
+  if (backendData.needs_username && backendData.pending_token) {
+    const response = NextResponse.redirect(new URL("/multiplayer", appUrl));
+    response.cookies.set("pending_oauth", backendData.pending_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: PENDING_OAUTH_TTL,
+    });
+    response.cookies.delete("oauth_state");
+    return response;
+  }
+
+  if (!backendData.token) {
+    return redirectWithError(appUrl, "backend_error");
+  }
+  const token = backendData.token;
 
   // 7. Set session cookie and redirect to multiplayer lobby
   const response = NextResponse.redirect(new URL("/multiplayer", appUrl));

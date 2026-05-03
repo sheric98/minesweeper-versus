@@ -26,6 +26,25 @@ export default async function MultiplayerPage({
     } catch { /* ignore */ }
   }
 
+  // First-time Google users land here with a `pending_oauth` cookie set
+  // by the OAuth callback. Decode (display-only — no signature verification)
+  // to surface the suggested username in the chooser modal.
+  let pendingOAuth: { suggestedUsername: string } | undefined;
+  if (!isAuthenticated) {
+    const pendingToken = cookieStore.get("pending_oauth")?.value;
+    if (pendingToken) {
+      try {
+        const parts = pendingToken.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
+          if (typeof payload.suggested === "string") {
+            pendingOAuth = { suggestedUsername: payload.suggested };
+          }
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
   return (
     // `relative` scopes UsernameModal's `absolute inset-0` overlay to this
     // content area, keeping the NavBar accessible above the modal.
@@ -51,8 +70,11 @@ export default async function MultiplayerPage({
         </div>
       )}
 
-      {/* Shows username prompt when unauthenticated; renders null otherwise */}
-      <UsernameModal isAuthenticated={isAuthenticated} oauthError={oauthError} />
+      <UsernameModal
+        isAuthenticated={isAuthenticated}
+        oauthError={oauthError}
+        pendingOAuth={pendingOAuth}
+      />
     </main>
   );
 }

@@ -3,22 +3,45 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Props {
-  isAuthenticated: boolean;
-  oauthError?: string;
-}
-
-const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
-
 import { RAISED_OUTER, SUNKEN_OUTER, PRESSED as WIN95_PRESSED } from "@/app/lib/win95";
 
 const RAISED = RAISED_OUTER;
 const SUNKEN = SUNKEN_OUTER;
 const PRESSED = WIN95_PRESSED;
 
-export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
+interface Props {
+  isAuthenticated: boolean;
+  oauthError?: string;
+  pendingOAuth?: { suggestedUsername: string };
+}
+
+const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
+
+function oauthErrorMessage(code?: string): string | null {
+  if (!code) return null;
+  switch (code) {
+    case "state":
+    case "session_expired":
+      return "Sign-in expired. Please try again.";
+    case "exchange":
+      return "Could not complete sign-in. Please try again.";
+    case "verify":
+      return "Could not verify your account. Please try again.";
+    case "backend":
+      return "Server error during sign-in. Please try again.";
+    default:
+      return "Sign-in failed. Please try again.";
+  }
+}
+
+export default function UsernameModal({
+  isAuthenticated,
+  oauthError,
+  pendingOAuth,
+}: Props) {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const isPending = !!pendingOAuth;
+  const [username, setUsername] = useState(pendingOAuth?.suggestedUsername ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -27,11 +50,12 @@ export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
 
   function clientValidate(value: string): string | null {
     if (value.trim().length === 0) return "Username cannot be empty.";
-    if (!USERNAME_RE.test(value.trim())) return "1–20 letters, numbers, or underscores only.";
+    if (!USERNAME_RE.test(value.trim()))
+      return "1–20 letters, numbers, or underscores only.";
     return null;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleGuestSubmit(e: React.FormEvent) {
     e.preventDefault();
     const clientError = clientValidate(username);
     if (clientError) {
@@ -51,8 +75,6 @@ export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
         setError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      // Trigger server re-render: Server Component re-reads the cookie,
-      // isAuthenticated flips to true, and this modal returns null.
       router.refresh();
     } catch {
       setError("Network error. Please check your connection.");
@@ -60,6 +82,56 @@ export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
       setLoading(false);
     }
   }
+
+  async function handlePendingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const clientError = clientValidate(username);
+    if (clientError) {
+      setError(clientError);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/google/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim() }),
+      });
+      if (res.status === 401) {
+        // Pending state expired — navigate with an error code. The BFF has
+        // already cleared the pending_oauth cookie in its 401 response, so
+        // the server render at the new URL will show the default modal body
+        // (no pending_oauth) with the "Sign-in expired" banner via oauthError.
+        router.push("/multiplayer?error=session_expired");
+        return;
+      }
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Network error. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCancel() {
+    setLoading(true);
+    try {
+      await fetch("/api/auth/google/complete", { method: "DELETE" });
+      router.refresh();
+    } catch {
+      setError("Network error. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const errorMessage = oauthErrorMessage(oauthError);
 
   return (
     // Overlay scoped to the parent's `relative` container — does not cover the NavBar.
@@ -70,62 +142,107 @@ export default function UsernameModal({ isAuthenticated, oauthError }: Props) {
       >
         {/* Title bar */}
         <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none">
-          Multiplayer
+          {isPending ? "Choose your username" : "Multiplayer"}
         </div>
 
         {/* Body */}
         <div className="px-4 py-4 flex flex-col gap-3">
-          {oauthError && (
+          {errorMessage && (
             <p className="text-red-700 text-xs bg-white px-2 py-1 border border-red-700">
-              {oauthError === "state" ? "Sign-in expired. Please try again." :
-               oauthError === "exchange" ? "Could not complete sign-in. Please try again." :
-               oauthError === "verify" ? "Could not verify your account. Please try again." :
-               oauthError === "backend" ? "Server error during sign-in. Please try again." :
-               "Sign-in failed. Please try again."}
+              {errorMessage}
             </p>
           )}
 
-          {/* Google sign-in */}
-          <a
-            href="/api/auth/google/init"
-            className={`${RAISED} bg-ms-silver px-4 py-1.5 text-sm font-bold text-center cursor-default hover:brightness-95 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
-          >
-            Sign in with Google
-          </a>
+          {isPending ? (
+            <>
+              <p className="text-xs">
+                Pick a username for your account. This is what other players
+                will see.
+              </p>
+              <form onSubmit={handlePendingSubmit} className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => {
+                    setUsername(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  onFocus={e => e.target.select()}
+                  maxLength={20}
+                  placeholder="username"
+                  disabled={loading}
+                  autoFocus
+                  className={`${SUNKEN} bg-white px-2 py-1 text-sm font-mono w-full outline-none disabled:opacity-60`}
+                />
 
-          {/* Divider */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 border-t border-[#808080]" />
-            <span className="text-xs text-[#808080] select-none">or play as guest</span>
-            <div className="flex-1 border-t border-[#808080]" />
-          </div>
+                {/* Reserved height prevents layout shift when error appears/disappears */}
+                <p className="text-red-700 text-xs min-h-[1rem]">{error ?? ""}</p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-            <input
-              type="text"
-              value={username}
-              onChange={e => {
-                setUsername(e.target.value);
-                if (error) setError(null); // clear stale error on edit
-              }}
-              maxLength={20}
-              placeholder="e.g. player_one"
-              disabled={loading}
-              autoFocus
-              className={`${SUNKEN} bg-white px-2 py-1 text-sm font-mono w-full outline-none disabled:opacity-60`}
-            />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={loading}
+                    className={`${RAISED} bg-ms-silver px-4 py-1 text-sm cursor-default disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`${loading ? PRESSED : RAISED} bg-ms-silver px-4 py-1 text-sm font-bold cursor-default disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+                  >
+                    {loading ? "…" : "Continue"}
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              {/* Google sign-in */}
+              <a
+                href="/api/auth/google/init"
+                className={`${RAISED} bg-ms-silver px-4 py-1.5 text-sm font-bold text-center cursor-default hover:brightness-95 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+              >
+                Sign in with Google
+              </a>
 
-            {/* Reserved height prevents layout shift when error appears/disappears */}
-            <p className="text-red-700 text-xs min-h-[1rem]">{error ?? ""}</p>
+              {/* Divider */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 border-t border-[#808080]" />
+                <span className="text-xs text-[#808080] select-none">
+                  or play as guest
+                </span>
+                <div className="flex-1 border-t border-[#808080]" />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`${loading ? PRESSED : RAISED} bg-ms-silver px-4 py-1 text-sm font-bold self-end cursor-default disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
-            >
-              {loading ? "Joining…" : "OK"}
-            </button>
-          </form>
+              <form onSubmit={handleGuestSubmit} className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => {
+                    setUsername(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  maxLength={20}
+                  placeholder="e.g. player_one"
+                  disabled={loading}
+                  autoFocus
+                  className={`${SUNKEN} bg-white px-2 py-1 text-sm font-mono w-full outline-none disabled:opacity-60`}
+                />
+
+                <p className="text-red-700 text-xs min-h-[1rem]">{error ?? ""}</p>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`${loading ? PRESSED : RAISED} bg-ms-silver px-4 py-1 text-sm font-bold self-end cursor-default disabled:opacity-60 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+                >
+                  {loading ? "Joining…" : "OK"}
+                </button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
