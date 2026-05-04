@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RAISED_OUTER, SUNKEN_OUTER, PRESSED as WIN95_PRESSED } from "@/app/lib/win95";
@@ -13,6 +13,9 @@ interface Props {
   isAuthenticated: boolean;
   oauthError?: string;
   pendingOAuth?: { suggestedUsername: string };
+  // When provided, the modal is dismissible (× button, Esc, backdrop click)
+  // and uses a fixed full-viewport overlay instead of an absolute-scoped one.
+  onClose?: () => void;
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
@@ -38,12 +41,23 @@ export default function UsernameModal({
   isAuthenticated,
   oauthError,
   pendingOAuth,
+  onClose,
 }: Props) {
   const router = useRouter();
   const isPending = !!pendingOAuth;
+  const dismissible = !!onClose;
   const [username, setUsername] = useState(pendingOAuth?.suggestedUsername ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!dismissible || isAuthenticated) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose?.();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dismissible, isAuthenticated, onClose]);
 
   // Already authenticated — render nothing, let page content show through.
   if (isAuthenticated) return null;
@@ -134,15 +148,39 @@ export default function UsernameModal({
   const errorMessage = oauthErrorMessage(oauthError);
 
   return (
-    // Overlay scoped to the parent's `relative` container — does not cover the NavBar.
-    <div className="absolute inset-0 flex items-center justify-center bg-[#c0c0c0]/70">
+    // Overlay: `absolute` (scoped to parent `relative`, used by /multiplayer)
+    // when no onClose; `fixed` covering the viewport when dismissible.
+    <div
+      className={
+        dismissible
+          ? "fixed inset-0 z-50 flex items-center justify-center bg-[#c0c0c0]/70"
+          : "absolute inset-0 flex items-center justify-center bg-[#c0c0c0]/70"
+      }
+      onMouseDown={
+        dismissible
+          ? (e) => { if (e.target === e.currentTarget) onClose?.(); }
+          : undefined
+      }
+    >
       {/* Win95-style dialog window */}
       <div
         className={`${RAISED} bg-ms-silver flex flex-col min-w-[280px] max-w-[360px] w-full`}
       >
         {/* Title bar */}
-        <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none">
-          {isPending ? "Choose your username" : "Multiplayer"}
+        <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none flex items-center">
+          <span className="flex-1">
+            {isPending ? "Choose your username" : dismissible ? "Sign in" : "Multiplayer"}
+          </span>
+          {dismissible && (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className={`${RAISED} bg-ms-silver text-black text-xs font-bold leading-none w-5 h-5 flex items-center justify-center cursor-default active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {/* Body */}

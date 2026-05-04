@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import SignInButton from "@/app/components/SignInButton";
+
 const LINKS = [
   { href: "/", label: "Singleplayer" },
   { href: "/no-guess", label: "No Guess" },
@@ -47,7 +49,7 @@ export default function NavBar({ username, authLevel }: Props) {
           </Link>
         );
       })}
-      {username && (
+      {username ? (
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm font-bold select-none px-2">
             {username}
@@ -62,7 +64,11 @@ export default function NavBar({ username, authLevel }: Props) {
             Sign out
           </a>
         </div>
-      )}
+      ) : pathname !== "/multiplayer" ? (
+        <div className="ml-auto flex items-center">
+          <SignInButton />
+        </div>
+      ) : null}
     </nav>
   );
 }
