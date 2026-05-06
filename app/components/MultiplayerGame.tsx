@@ -586,7 +586,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
       {/* Main game area: player board centered, opponent board anchored to its right */}
       <div className="relative">
         {/* Player board section — centered on screen */}
-        <div className={`flex flex-col items-center gap-0 relative transition-all duration-300 ${cooldownMs > 0 ? "opacity-50 grayscale" : ""}`}>
+        <div className="flex flex-col items-center gap-0 relative">
           <Header
             flagsRemaining={flagsRemaining}
             elapsedSeconds={elapsedSeconds}
@@ -636,11 +636,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
           </div>
           <div
             className={`rounded transition-shadow duration-300 ${
-              cooldownMs > 0
-                ? "shadow-[0_0_12px_4px_rgba(239,68,68,0.6)]"
-                : opponentDeathFlash
-                  ? "shadow-[0_0_0_3px_#ef4444]"
-                  : ""
+              opponentDeathFlash ? "shadow-[0_0_0_3px_#ef4444]" : ""
             }`}
           >
             <OpponentBoard revealedCells={opponentRevealed} />
