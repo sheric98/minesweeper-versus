@@ -125,7 +125,12 @@ export default function UsernameModal({
         setError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
-      router.refresh();
+      const data = (await res.json()) as { next?: string | null };
+      if (data.next) {
+        router.push(data.next);
+      } else {
+        router.refresh();
+      }
     } catch {
       setError("Network error. Please check your connection.");
     } finally {
