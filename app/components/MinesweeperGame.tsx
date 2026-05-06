@@ -71,6 +71,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [showSignInModal, setShowSignInModal] = useState(false);
   const pathname = usePathname();
   const scoreSubmittedRef = useRef(false);
+  const signInModalDismissedRef = useRef(false);
   const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -109,6 +110,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     if (phase !== "won") return;
     if (authLevel === "google") return;
     if (!showLeaderboard) return;
+    if (signInModalDismissedRef.current) return;
     // Treat empty/loading/failed as "qualifies" — over-prompt is the chosen default.
     const qualifies = scores.length < 10 || elapsedSeconds < scores[9].time_seconds;
     if (qualifies) setShowSignInModal(true);
@@ -267,6 +269,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setPhase("idle");
     setElapsedSeconds(0);
     scoreSubmittedRef.current = false;
+    signInModalDismissedRef.current = false;
     setShowSignInModal(false);
   }, []);
 
@@ -276,6 +279,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setPhase("idle");
     setElapsedSeconds(0);
     scoreSubmittedRef.current = false;
+    signInModalDismissedRef.current = false;
     setShowSignInModal(false);
   }, []);
 
@@ -453,7 +457,10 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
       )}
       {showSignInModal && (
         <PostWinSignInModal
-          onClose={() => setShowSignInModal(false)}
+          onClose={() => {
+            signInModalDismissedRef.current = true;
+            setShowSignInModal(false);
+          }}
           onSignIn={() => {
             PendingScore.write({
               time_seconds: elapsedSeconds,
