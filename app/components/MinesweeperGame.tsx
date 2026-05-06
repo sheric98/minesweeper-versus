@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { usePathname } from "next/navigation";
 import {
   Board,
   GamePhase,
@@ -22,6 +23,8 @@ import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import Leaderboard, { type LeaderboardEntry } from "@/app/components/Leaderboard";
 import DifficultySelector, { type NoGuessDifficulty } from "@/app/components/DifficultySelector";
+import PostWinSignInModal from "@/app/components/PostWinSignInModal";
+import * as PendingScore from "@/app/lib/pending-score";
 
 type GameMode = "random" | "no-guess";
 
@@ -65,6 +68,8 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [difficulty, setDifficulty] = useState<NoGuessDifficulty>("beginner");
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const pathname = usePathname();
   const scoreSubmittedRef = useRef(false);
   const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -98,6 +103,44 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         .catch(() => {});
     }
   }, [phase, authLevel, elapsedSeconds, mode, showLeaderboard]);
+
+  // Open sign-in prompt when an anonymous user wins with a top-10 time.
+  useEffect(() => {
+    if (phase !== "won") return;
+    if (authLevel === "google") return;
+    if (!showLeaderboard) return;
+    // Treat empty/loading/failed as "qualifies" — over-prompt is the chosen default.
+    const qualifies = scores.length < 10 || elapsedSeconds < scores[9].time_seconds;
+    if (qualifies) setShowSignInModal(true);
+  }, [phase, authLevel, showLeaderboard, scores, elapsedSeconds]);
+
+  // On mount, finish the score-save started before the OAuth roundtrip.
+  useEffect(() => {
+    const pending = PendingScore.read();
+    if (!pending) return;
+    if (authLevel !== "google") {
+      PendingScore.clear();
+      return;
+    }
+    fetch("/api/leaderboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        time_seconds: pending.time_seconds,
+        mode: pending.mode,
+        ...(pending.difficulty && { difficulty: pending.difficulty }),
+      }),
+    })
+      .then(() => {
+        PendingScore.clear();
+        setLeaderboardRefreshKey((k) => k + 1);
+      })
+      .catch(() => {
+        PendingScore.clear();
+      });
+    // Run once on mount; intentionally no deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Own the leaderboard fetch so we can run a top-10 qualification check on win.
   useEffect(() => {
@@ -224,6 +267,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setPhase("idle");
     setElapsedSeconds(0);
     scoreSubmittedRef.current = false;
+    setShowSignInModal(false);
   }, []);
 
   const handleDifficultyChange = useCallback((d: NoGuessDifficulty) => {
@@ -232,6 +276,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setPhase("idle");
     setElapsedSeconds(0);
     scoreSubmittedRef.current = false;
+    setShowSignInModal(false);
   }, []);
 
   // Track hovered cell for spacebar/chord handling (ref to avoid re-renders)
@@ -404,6 +449,20 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
           mode={mode}
           difficulty={mode === "no-guess" ? difficulty : undefined}
           scores={scores}
+        />
+      )}
+      {showSignInModal && (
+        <PostWinSignInModal
+          onClose={() => setShowSignInModal(false)}
+          onSignIn={() => {
+            PendingScore.write({
+              time_seconds: elapsedSeconds,
+              mode,
+              ...(mode === "no-guess" && { difficulty }),
+            });
+            const next = pathname || "/";
+            window.location.assign(`/api/auth/google/init?next=${encodeURIComponent(next)}`);
+          }}
         />
       )}
     </div>

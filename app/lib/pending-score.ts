@@ -4,7 +4,7 @@ const TTL_MS = 10 * 60 * 1000; // 10 minutes
 export type PendingScoreInput = {
   time_seconds: number;
   mode: "random" | "no-guess";
-  difficulty?: "beginner" | "intermediate" | "expert";
+  difficulty?: "beginner" | "intermediate" | "advanced" | "expert";
 };
 
 export type PendingScore = PendingScoreInput & { expiresAt: number };
@@ -18,6 +18,7 @@ function isValid(value: unknown): value is PendingScore {
     v.difficulty !== undefined &&
     v.difficulty !== "beginner" &&
     v.difficulty !== "intermediate" &&
+    v.difficulty !== "advanced" &&
     v.difficulty !== "expert"
   ) {
     return false;
