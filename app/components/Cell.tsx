@@ -41,12 +41,18 @@ const CellComponent = React.memo(function Cell({
   const handleContextMenu = (e: React.MouseEvent) => onRightClick(e, row, col);
   const handleMouseEnter = () => onCellMouseEnter(row, col);
 
-  const base = "w-7 h-7 flex items-center justify-center text-lg font-bold font-mono select-none box-border overflow-hidden";
+  const base = "flex items-center justify-center font-bold font-mono select-none box-border overflow-hidden";
+  const sizeStyle: React.CSSProperties = {
+    width: "var(--cell-size)",
+    height: "var(--cell-size)",
+    fontSize: "calc(var(--cell-size) * 0.65)",
+  };
 
   if (state === "unrevealed") {
     return (
       <div
         className={`${base} ${sunk ? SUNKEN : RAISED} bg-[#c0c0c0] cursor-default`}
+        style={sizeStyle}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
@@ -58,6 +64,7 @@ const CellComponent = React.memo(function Cell({
     return (
       <div
         className={`${base} ${RAISED} bg-[#c0c0c0] cursor-default`}
+        style={sizeStyle}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
@@ -73,6 +80,7 @@ const CellComponent = React.memo(function Cell({
     return (
       <div
         className={`${base} ${SUNKEN} bg-[#e0e0e0] ${color}`}
+        style={sizeStyle}
         onMouseEnter={handleMouseEnter}
       >
         {label}
@@ -82,7 +90,7 @@ const CellComponent = React.memo(function Cell({
 
   if (state === "mine") {
     return (
-      <div className={`${base} ${SUNKEN} bg-[#e0e0e0]`} onMouseEnter={handleMouseEnter}>
+      <div className={`${base} ${SUNKEN} bg-[#e0e0e0]`} style={sizeStyle} onMouseEnter={handleMouseEnter}>
         💣
       </div>
     );
@@ -90,17 +98,19 @@ const CellComponent = React.memo(function Cell({
 
   if (state === "mine-clicked") {
     return (
-      <div className={`${base} ${SUNKEN} bg-red-500`} onMouseEnter={handleMouseEnter}>
+      <div className={`${base} ${SUNKEN} bg-red-500`} style={sizeStyle} onMouseEnter={handleMouseEnter}>
         💣
       </div>
     );
   }
 
-  // mine-wrong: flagged cell that was not a mine
   return (
-    <div className={`${base} ${RAISED} bg-[#c0c0c0] relative`} onMouseEnter={handleMouseEnter}>
+    <div className={`${base} ${RAISED} bg-[#c0c0c0] relative`} style={sizeStyle} onMouseEnter={handleMouseEnter}>
       <span>🚩</span>
-      <span className="absolute inset-0 flex items-center justify-center text-red-600 text-sm font-bold">
+      <span
+        className="absolute inset-0 flex items-center justify-center text-red-600 font-bold"
+        style={{ fontSize: "calc(var(--cell-size) * 0.5)" }}
+      >
         ✕
       </span>
     </div>

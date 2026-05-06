@@ -12,7 +12,7 @@ export default function CountdownBoard({ startingSquare }: CountdownBoardProps) 
   return (
     <div
       className="border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]"
-      style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1.75rem)` }}
+      style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, var(--cell-size))` }}
     >
       {Array.from({ length: ROWS }, (_, r) =>
         Array.from({ length: COLS }, (_, c) => {
@@ -21,14 +21,16 @@ export default function CountdownBoard({ startingSquare }: CountdownBoardProps) 
           return (
             <div
               key={`${r}-${c}`}
-              className={`w-7 h-7 box-border ${RAISED} ${isStart || isNeighbor ? "" : "bg-[#c0c0c0]"}`}
-              style={
-                isStart
+              className={`box-border ${RAISED} ${isStart || isNeighbor ? "" : "bg-[#c0c0c0]"}`}
+              style={{
+                width: "var(--cell-size)",
+                height: "var(--cell-size)",
+                ...(isStart
                   ? { animation: "pulse-green 0.8s ease-in-out infinite" }
                   : isNeighbor
                     ? { animation: "pulse-green 0.8s ease-in-out infinite", filter: "brightness(0.85) saturate(0.5)" }
-                    : undefined
-              }
+                    : {}),
+              }}
             />
           );
         })

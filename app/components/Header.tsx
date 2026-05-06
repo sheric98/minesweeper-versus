@@ -34,7 +34,7 @@ export default function Header({ flagsRemaining, elapsedSeconds, phase, onReset,
   return (
     <div
       className={`flex items-center justify-between px-2 py-1.5 border-4 ${accent}`}
-      style={{ width: `calc(${COLS} * 1.75rem + 8px)` }}
+      style={{ width: `calc(${COLS} * var(--cell-size) + 8px)` }}
     >
       {/* Flag counter */}
       <div className={`${SUNKEN_PANEL} bg-black px-1 py-0.5 font-mono text-red-600 text-xl leading-none min-w-[3ch] text-right`}>

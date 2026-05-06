@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -7,6 +7,11 @@ import NavBar from "@/app/components/NavBar";
 export const metadata: Metadata = {
   title: "Minesweeper",
   description: "Classic Minesweeper — 30×16 board, 99 mines",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default async function RootLayout({

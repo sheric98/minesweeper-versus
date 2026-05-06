@@ -19,7 +19,7 @@ export default function DifficultySelector({ difficulty, onDifficultyChange }: D
   return (
     <div
       className="flex"
-      style={{ width: `calc(${COLS} * 1.75rem + 8px)` }}
+      style={{ width: `calc(${COLS} * var(--cell-size) + 8px)` }}
     >
       {DIFFICULTIES.map(({ value, label }) => {
         const isActive = value === difficulty;

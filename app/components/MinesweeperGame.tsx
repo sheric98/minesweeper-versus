@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import {
   Board,
@@ -406,7 +406,10 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const flagsRemaining = MINE_COUNT - countFlags(board);
 
   return (
-    <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 select-none">
+    <div
+      className="flex flex-col xl:flex-row items-center xl:items-start gap-4 select-none"
+      style={{ "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)" } as CSSProperties}
+    >
       <div className="flex flex-col items-center gap-0">
         {mode === "no-guess" && (
           <DifficultySelector

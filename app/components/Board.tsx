@@ -17,7 +17,7 @@ export default function BoardComponent({ board, sunkCells, onCellLeftClick, onCe
   return (
     <div
       className="border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]"
-      style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1.75rem)` }}
+      style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, var(--cell-size))` }}
       onMouseLeave={onBoardMouseLeave}
       onContextMenu={e => e.preventDefault()}
       onMouseDown={onBoardMouseDown}

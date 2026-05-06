@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type CSSProperties } from "react";
 import {
   Board,
   GamePhase,
@@ -565,7 +565,10 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
     : 0;
 
   return (
-    <div className="flex flex-col items-center gap-4 select-none relative">
+    <div
+      className="flex flex-col items-center gap-4 select-none relative"
+      style={{ "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)" } as CSSProperties}
+    >
       {/* Connection status indicator */}
       <div className="fixed top-16 right-4 flex items-center gap-2 text-sm font-mono text-ms-dark z-50">
         <span
@@ -583,9 +586,9 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
         {connectionState === "disconnected" && "Disconnected"}
       </div>
 
-      {/* Main game area: player board centered, opponent board anchored to its right */}
-      <div className="relative">
-        {/* Player board section — centered on screen */}
+      {/* Main game area: stacks vertically below xl, side-by-side at xl+ */}
+      <div className="flex flex-col xl:flex-row items-center xl:items-start gap-6">
+        {/* Player board section */}
         <div className="flex flex-col items-center gap-0 relative">
           <Header
             flagsRemaining={flagsRemaining}
@@ -612,7 +615,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
           ) : (
             <div
               className="bg-[#c0c0c0] border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8] flex items-center justify-center text-ms-dark"
-              style={{ width: `calc(${COLS} * 1.75rem)`, height: `calc(${ROWS} * 1.75rem)` }}
+              style={{ width: `calc(${COLS} * var(--cell-size))`, height: `calc(${ROWS} * var(--cell-size))` }}
             >
               Waiting for game...
             </div>
@@ -626,8 +629,8 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
           )}
         </div>
 
-        {/* Opponent section — positioned to the right of the player board */}
-        <div className="absolute left-full top-0 ml-6 flex flex-col items-center gap-0">
+        {/* Opponent section */}
+        <div className="flex flex-col items-center gap-0">
           <div
             className="flex items-center justify-center px-2 py-1.5 border-4 bg-rose-200 border-t-rose-100 border-l-rose-100 border-b-rose-300 border-r-rose-300 text-sm font-bold font-mono w-full"
           >

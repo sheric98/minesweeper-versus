@@ -6,10 +6,18 @@ interface OpponentBoardProps {
 }
 
 const OpponentBoard = React.memo(function OpponentBoard({ revealedCells }: OpponentBoardProps) {
+  const cellStyle: React.CSSProperties = {
+    width: "var(--opponent-cell-size)",
+    height: "var(--opponent-cell-size)",
+  };
   return (
     <div
       className="border-2 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]"
-      style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 0.75rem)` }}
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${COLS}, var(--opponent-cell-size))`,
+        ["--opponent-cell-size" as string]: "clamp(0.5rem, calc((100vw - 2rem) / 30), 0.75rem)",
+      }}
     >
       {Array.from({ length: ROWS }, (_, r) =>
         Array.from({ length: COLS }, (_, c) => {
@@ -17,10 +25,11 @@ const OpponentBoard = React.memo(function OpponentBoard({ revealedCells }: Oppon
           return (
             <div
               key={`${r}-${c}`}
+              style={cellStyle}
               className={
                 isRevealed
-                  ? "w-3 h-3 bg-[#e0e0e0] border border-[#b0b0b0]"
-                  : "w-3 h-3 bg-[#c0c0c0] border border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]"
+                  ? "bg-[#e0e0e0] border border-[#b0b0b0]"
+                  : "bg-[#c0c0c0] border border-t-[#d8d8d8] border-l-[#d8d8d8] border-b-[#a0a0a0] border-r-[#a0a0a0]"
               }
             />
           );
