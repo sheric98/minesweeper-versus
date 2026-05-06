@@ -20,7 +20,7 @@ import { decodeBoard } from "@/app/lib/multiplayer-utils";
 import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
-import Leaderboard from "@/app/components/Leaderboard";
+import Leaderboard, { type LeaderboardEntry } from "@/app/components/Leaderboard";
 import DifficultySelector, { type NoGuessDifficulty } from "@/app/components/DifficultySelector";
 
 type GameMode = "random" | "no-guess";
@@ -62,6 +62,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
+  const [scores, setScores] = useState<LeaderboardEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [difficulty, setDifficulty] = useState<NoGuessDifficulty>("beginner");
   const scoreSubmittedRef = useRef(false);
@@ -97,6 +98,22 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         .catch(() => {});
     }
   }, [phase, authLevel, elapsedSeconds, mode, showLeaderboard]);
+
+  // Own the leaderboard fetch so we can run a top-10 qualification check on win.
+  useEffect(() => {
+    if (!showLeaderboard) return;
+    let url = `/api/leaderboard?mode=${mode}`;
+    if (mode === "no-guess") url += `&difficulty=${encodeURIComponent(difficulty)}`;
+    let cancelled = false;
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.scores) setScores(data.scores);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [leaderboardRefreshKey, mode, difficulty, showLeaderboard]);
 
   // Timer: start when playing, stop otherwise
   useEffect(() => {
@@ -381,7 +398,13 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         )}
       </div>
       {showLeaderboard && (
-        <Leaderboard username={username} refreshKey={leaderboardRefreshKey} mode={mode} difficulty={mode === "no-guess" ? difficulty : undefined} />
+        <Leaderboard
+          username={username}
+          refreshKey={leaderboardRefreshKey}
+          mode={mode}
+          difficulty={mode === "no-guess" ? difficulty : undefined}
+          scores={scores}
+        />
       )}
     </div>
   );
