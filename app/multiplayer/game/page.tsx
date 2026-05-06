@@ -16,19 +16,21 @@ export default async function MultiplayerGamePage({ searchParams }: PageProps) {
   const matchId = params.matchId;
   if (!matchId) redirect("/multiplayer");
 
-  // Decode username from JWT payload (same logic as layout.tsx)
+  // Decode username + authLevel from JWT payload (same logic as app/page.tsx).
   let playerName = "Player";
+  let authLevel: "anonymous" | "google" = "anonymous";
   try {
     const parts = token.split(".");
     if (parts.length >= 2) {
       const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
       if (typeof payload.sub === "string") playerName = payload.sub;
+      if (payload.authLevel === "google") authLevel = "google";
     }
-  } catch { /* fallback to "Player" */ }
+  } catch { /* fallback to defaults */ }
 
   return (
     <main className="flex flex-1 items-center justify-center bg-[#c0c0c0]">
-      <MultiplayerGame matchId={matchId} playerName={playerName} />
+      <MultiplayerGame matchId={matchId} playerName={playerName} authLevel={authLevel} />
     </main>
   );
 }

@@ -3,6 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 const USERNAME_RE = /^[a-zA-Z0-9_]{1,20}$/;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
+function isSafeNext(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^\/(?![/\\])/.test(value);
+}
+
+function consumeNext(request: NextRequest): string | null {
+  const cookieValue = request.cookies.get("oauth_next")?.value;
+  return isSafeNext(cookieValue) ? cookieValue : null;
+}
+
+function clearOauthNextCookie(response: NextResponse): void {
+  response.cookies.delete("oauth_next");
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const pendingToken = request.cookies.get("pending_oauth")?.value;
   if (!pendingToken) {
@@ -93,7 +107,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const response = NextResponse.json({ ok: true });
+  const next = consumeNext(request);
+  const response = NextResponse.json({ ok: true, next });
   response.cookies.set("session", successData.token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -102,11 +117,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     maxAge: THIRTY_DAYS,
   });
   response.cookies.delete("pending_oauth");
+  clearOauthNextCookie(response);
   return response;
 }
 
 export async function DELETE(): Promise<NextResponse> {
   const response = NextResponse.json({ ok: true });
   response.cookies.delete("pending_oauth");
+  response.cookies.delete("oauth_next");
   return response;
 }

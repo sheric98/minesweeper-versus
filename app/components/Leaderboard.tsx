@@ -8,7 +8,7 @@ const SUNKEN_PANEL = SUNKEN_INNER;
 
 type LeaderboardMode = "random" | "no-guess";
 
-interface LeaderboardEntry {
+export interface LeaderboardEntry {
   username: string;
   time_seconds: number;
   created_at: string;
@@ -19,21 +19,28 @@ interface LeaderboardProps {
   refreshKey: number;
   mode?: LeaderboardMode;
   difficulty?: string;
+  // When provided, the parent owns fetch state and we render these scores
+  // directly. When undefined, we self-fetch.
+  scores?: LeaderboardEntry[];
 }
 
-export default function Leaderboard({ username, refreshKey, mode = "random", difficulty }: LeaderboardProps) {
-  const [scores, setScores] = useState<LeaderboardEntry[]>([]);
+export default function Leaderboard({ username, refreshKey, mode = "random", difficulty, scores: scoresProp }: LeaderboardProps) {
+  const [internalScores, setInternalScores] = useState<LeaderboardEntry[]>([]);
+  const isControlled = scoresProp !== undefined;
 
   useEffect(() => {
+    if (isControlled) return;
     let url = `/api/leaderboard?mode=${mode}`;
     if (difficulty) url += `&difficulty=${encodeURIComponent(difficulty)}`;
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        if (data.scores) setScores(data.scores);
+        if (data.scores) setInternalScores(data.scores);
       })
       .catch(() => {});
-  }, [refreshKey, mode, difficulty]);
+  }, [refreshKey, mode, difficulty, isControlled]);
+
+  const scores = isControlled ? scoresProp : internalScores;
 
   return (
     <div className={`${RAISED} bg-[#c0c0c0] p-2 w-56 flex-shrink-0`}>

@@ -62,9 +62,10 @@ function computeSunkCells(
 interface MultiplayerGameProps {
   matchId: string;
   playerName: string;
+  authLevel: "anonymous" | "google";
 }
 
-export default function MultiplayerGame({ matchId, playerName }: MultiplayerGameProps) {
+export default function MultiplayerGame({ matchId, playerName, authLevel }: MultiplayerGameProps) {
   // -- State --
   const [board, setBoard] = useState<Board | null>(null);
   const [matchState, setMatchState] = useState<MatchState>("lobby");
@@ -710,6 +711,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           opponentWins={opponentWins}
           h2hRecord={h2hRecord}
           eloChange={eloChange}
+          authLevel={authLevel}
           rematchState={rematchState}
           onRematchRequest={handleRematchRequest}
           onRematchDecline={handleRematchDecline}

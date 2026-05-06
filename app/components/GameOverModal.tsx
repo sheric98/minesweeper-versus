@@ -20,6 +20,7 @@ interface GameOverModalProps {
   opponentWins: number;
   h2hRecord: { wins: number; losses: number } | null;
   eloChange?: EloChange | null;
+  authLevel: "anonymous" | "google";
   rematchState: RematchState;
   onRematchRequest: () => void;
   onRematchDecline: () => void;
@@ -43,6 +44,7 @@ export default function GameOverModal({
   opponentWins,
   h2hRecord,
   eloChange,
+  authLevel,
   rematchState,
   onRematchRequest,
   onRematchDecline,
@@ -118,6 +120,21 @@ export default function GameOverModal({
               <span className={`ml-1 font-bold ${eloChange.change >= 0 ? "text-green-700" : "text-red-700"}`}>
                 ({eloChange.change >= 0 ? "+" : ""}{eloChange.change})
               </span>
+            </div>
+          )}
+
+          {/* Sign-in prompt for anonymous players (Elo not tracked) */}
+          {authLevel !== "google" && (
+            <div className="text-center text-xs border-t border-[#a0a0a0] pt-2 flex flex-col gap-2">
+              <span className="text-ms-dark">
+                Sign in with Google to track your Elo on future matches.
+              </span>
+              <a
+                href="/api/auth/google/init?next=/multiplayer"
+                className={`${RAISED} bg-ms-silver px-3 py-1 text-xs font-bold cursor-default hover:brightness-95 active:border-t-[#808080] active:border-l-[#808080] active:border-b-[#ffffff] active:border-r-[#ffffff]`}
+              >
+                Sign in with Google
+              </a>
             </div>
           )}
 

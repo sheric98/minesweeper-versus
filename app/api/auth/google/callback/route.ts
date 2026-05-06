@@ -6,6 +6,20 @@ const THIRTY_DAYS = 60 * 60 * 24 * 30;
 // Must match PENDING_OAUTH_TTL_SECONDS in backend auth.py.
 const PENDING_OAUTH_TTL = 600;
 
+function isSafeNext(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return /^\/(?![/\\])/.test(value);
+}
+
+function consumeNext(request: NextRequest): string {
+  const cookieValue = request.cookies.get("oauth_next")?.value;
+  return isSafeNext(cookieValue) ? cookieValue : "/multiplayer";
+}
+
+function clearOauthNextCookie(response: NextResponse): void {
+  response.cookies.delete("oauth_next");
+}
+
 // Dev-only placeholder JWT for mock mode.
 function mockToken(displayName: string): string {
   const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
@@ -24,7 +38,9 @@ function mockToken(displayName: string): string {
 function redirectWithError(appUrl: string, code: string): NextResponse {
   const url = new URL("/multiplayer", appUrl);
   url.searchParams.set("error", code);
-  return NextResponse.redirect(url.toString());
+  const response = NextResponse.redirect(url.toString());
+  clearOauthNextCookie(response);
+  return response;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -35,7 +51,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // --- Mock mode ---
   if (!clientId || params.get("mock") === "1") {
     const token = mockToken("MockGoogleUser");
-    const response = NextResponse.redirect(new URL("/multiplayer", appUrl));
+    const next = consumeNext(request);
+    const response = NextResponse.redirect(new URL(next, appUrl));
     response.cookies.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -43,6 +60,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       path: "/",
       maxAge: THIRTY_DAYS,
     });
+    clearOauthNextCookie(response);
     return response;
   }
 
@@ -128,7 +146,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!backendUrl) {
     // Fallback: no backend, mint a mock token with Google profile info
     const token = mockToken(idClaims.name ?? "GoogleUser");
-    const response = NextResponse.redirect(new URL("/multiplayer", appUrl));
+    const next = consumeNext(request);
+    const response = NextResponse.redirect(new URL(next, appUrl));
     response.cookies.set("session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -136,6 +155,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       path: "/",
       maxAge: THIRTY_DAYS,
     });
+    clearOauthNextCookie(response);
     return response;
   }
 
@@ -183,6 +203,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       maxAge: PENDING_OAUTH_TTL,
     });
     response.cookies.delete("oauth_state");
+    // Note: oauth_next is intentionally preserved across the username-chooser step.
     return response;
   }
 
@@ -191,8 +212,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   const token = backendData.token;
 
-  // 7. Set session cookie and redirect to multiplayer lobby
-  const response = NextResponse.redirect(new URL("/multiplayer", appUrl));
+  // 7. Set session cookie and redirect to next path (defaulting to multiplayer)
+  const next = consumeNext(request);
+  const response = NextResponse.redirect(new URL(next, appUrl));
   response.cookies.set("session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -201,8 +223,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     maxAge: THIRTY_DAYS,
   });
 
-  // Clear the oauth_state cookie
+  // Clear the oauth_state and oauth_next cookies
   response.cookies.delete("oauth_state");
+  clearOauthNextCookie(response);
 
   return response;
 }
