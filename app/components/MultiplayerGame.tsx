@@ -62,9 +62,10 @@ function computeSunkCells(
 interface MultiplayerGameProps {
   matchId: string;
   playerName: string;
+  authLevel: "anonymous" | "google";
 }
 
-export default function MultiplayerGame({ matchId, playerName }: MultiplayerGameProps) {
+export default function MultiplayerGame({ matchId, playerName, authLevel }: MultiplayerGameProps) {
   // -- State --
   const [board, setBoard] = useState<Board | null>(null);
   const [matchState, setMatchState] = useState<MatchState>("lobby");
@@ -585,7 +586,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
       {/* Main game area: player board centered, opponent board anchored to its right */}
       <div className="relative">
         {/* Player board section — centered on screen */}
-        <div className="flex flex-col items-center gap-0 relative">
+        <div className={`flex flex-col items-center gap-0 relative transition-all duration-300 ${cooldownMs > 0 ? "opacity-50 grayscale" : ""}`}>
           <Header
             flagsRemaining={flagsRemaining}
             elapsedSeconds={elapsedSeconds}
@@ -635,7 +636,11 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           </div>
           <div
             className={`rounded transition-shadow duration-300 ${
-              opponentDeathFlash ? "shadow-[0_0_0_3px_#ef4444]" : ""
+              cooldownMs > 0
+                ? "shadow-[0_0_12px_4px_rgba(239,68,68,0.6)]"
+                : opponentDeathFlash
+                  ? "shadow-[0_0_0_3px_#ef4444]"
+                  : ""
             }`}
           >
             <OpponentBoard revealedCells={opponentRevealed} />
@@ -710,6 +715,7 @@ export default function MultiplayerGame({ matchId, playerName }: MultiplayerGame
           opponentWins={opponentWins}
           h2hRecord={h2hRecord}
           eloChange={eloChange}
+          authLevel={authLevel}
           rematchState={rematchState}
           onRematchRequest={handleRematchRequest}
           onRematchDecline={handleRematchDecline}
