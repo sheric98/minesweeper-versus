@@ -33,30 +33,31 @@ export default function StatsSummary({ username }: StatsSummaryProps) {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
+    Promise.allSettled([
       fetch("/api/elo/me").then((r) =>
         r.ok ? (r.json() as Promise<EloMe>) : Promise.reject(new Error("elo/me failed")),
       ),
       fetch("/api/elo/leaderboard?limit=20").then((r) =>
         r.ok ? (r.json() as Promise<LeaderboardResponse>) : Promise.reject(new Error("leaderboard failed")),
       ),
-    ])
-      .then(([meData, lbData]) => {
-        if (cancelled) return;
-        setMe(meData);
-        if (username && Array.isArray(lbData.players)) {
-          const idx = lbData.players.findIndex((p) => p.username === username);
-          setRank(idx === -1 ? null : idx + 1);
-        } else {
-          setRank(null);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError(true);
-        setLoading(false);
-      });
+    ]).then(([meResult, lbResult]) => {
+      if (cancelled) return;
+
+      const meData = meResult.status === "fulfilled" ? meResult.value : null;
+      const lbData = lbResult.status === "fulfilled" ? lbResult.value : null;
+
+      setMe(meData);
+      setError(!meData);
+
+      if (username && lbData && Array.isArray(lbData.players)) {
+        const idx = lbData.players.findIndex((p) => p.username === username);
+        setRank(idx === -1 ? null : idx + 1);
+      } else {
+        setRank(null);
+      }
+
+      setLoading(false);
+    });
 
     return () => {
       cancelled = true;
@@ -75,11 +76,9 @@ export default function StatsSummary({ username }: StatsSummaryProps) {
   const eloText = loading ? "…" : error || !me ? "—" : String(me.rating);
   const rankText = loading
     ? "…"
-    : error
-      ? "—"
-      : rank == null
-        ? "Unranked"
-        : `#${rank}`;
+    : rank == null
+      ? "Unranked"
+      : `#${rank}`;
 
   return (
     <div className={`${RAISED_OUTER} bg-[#c0c0c0] flex flex-col w-full`}>
@@ -106,7 +105,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
       <span className="font-mono text-[10px] uppercase text-[#808080] tracking-wider">
         {label}
       </span>
-      <span className="font-mono text-xl font-bold">{value}</span>
+      <span className="font-mono text-xl font-bold text-center">{value}</span>
     </div>
   );
 }
