@@ -7,6 +7,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const params = request.nextUrl.searchParams;
+  const username = params.get("username");
   const opponent = params.get("opponent");
   const page = params.get("page");
   const pageSize = params.get("page_size");
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (opponent) {
       return NextResponse.json({ wins: 0, losses: 0, opponent });
     }
-    // Mock paginated records
+    // Mock paginated records — same data regardless of target username
     const mockRecords = [
       { opponent: "sweeper42", wins: 5, losses: 3, total_games: 8 },
       { opponent: "minehunter", wins: 2, losses: 4, total_games: 6 },
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // Build query string for backend
   const qp = new URLSearchParams();
+  if (username) qp.set("username", username);
   if (opponent) qp.set("opponent", opponent);
   if (page) qp.set("page", page);
   if (pageSize) qp.set("page_size", pageSize);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { RAISED_OUTER, SUNKEN_INNER } from "@/app/lib/win95";
 
-interface EloMe {
+interface EloStats {
   rating: number;
   wins: number;
   losses: number;
@@ -22,32 +22,38 @@ interface LeaderboardResponse {
 
 interface StatsSummaryProps {
   username?: string;
+  isOwnStats?: boolean;
 }
 
-export default function StatsSummary({ username }: StatsSummaryProps) {
+export default function StatsSummary({ username, isOwnStats = true }: StatsSummaryProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [me, setMe] = useState<EloMe | null>(null);
+  const [stats, setStats] = useState<EloStats | null>(null);
   const [rank, setRank] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    const statsUrl =
+      isOwnStats || !username
+        ? "/api/elo/me"
+        : `/api/elo/player?username=${encodeURIComponent(username)}`;
+
     Promise.allSettled([
-      fetch("/api/elo/me").then((r) =>
-        r.ok ? (r.json() as Promise<EloMe>) : Promise.reject(new Error("elo/me failed")),
+      fetch(statsUrl).then((r) =>
+        r.ok ? (r.json() as Promise<EloStats>) : Promise.reject(new Error("stats failed")),
       ),
       fetch("/api/elo/leaderboard?limit=20").then((r) =>
         r.ok ? (r.json() as Promise<LeaderboardResponse>) : Promise.reject(new Error("leaderboard failed")),
       ),
-    ]).then(([meResult, lbResult]) => {
+    ]).then(([statsResult, lbResult]) => {
       if (cancelled) return;
 
-      const meData = meResult.status === "fulfilled" ? meResult.value : null;
+      const statsData = statsResult.status === "fulfilled" ? statsResult.value : null;
       const lbData = lbResult.status === "fulfilled" ? lbResult.value : null;
 
-      setMe(meData);
-      setError(!meData);
+      setStats(statsData);
+      setError(!statsData);
 
       if (username && lbData && Array.isArray(lbData.players)) {
         const idx = lbData.players.findIndex((p) => p.username === username);
@@ -62,28 +68,30 @@ export default function StatsSummary({ username }: StatsSummaryProps) {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, isOwnStats]);
 
-  const total = me ? me.wins + me.losses : 0;
-  const matchesText = loading ? "…" : error || !me ? "—" : String(total);
+  const total = stats ? stats.wins + stats.losses : 0;
+  const matchesText = loading ? "…" : error || !stats ? "—" : String(total);
   const winRateText = loading
     ? "…"
-    : error || !me
+    : error || !stats
       ? "—"
       : total === 0
         ? "—"
-        : `${Math.round((me.wins / total) * 100)}%`;
-  const eloText = loading ? "…" : error || !me ? "—" : String(me.rating);
+        : `${Math.round((stats.wins / total) * 100)}%`;
+  const eloText = loading ? "…" : error || !stats ? "—" : String(stats.rating);
   const rankText = loading
     ? "…"
     : rank == null
       ? "Unranked"
       : `#${rank}`;
 
+  const titleText = isOwnStats || !username ? "Stats" : `${username} — Stats`;
+
   return (
     <div className={`${RAISED_OUTER} bg-[#c0c0c0] flex flex-col w-full`}>
       <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none">
-        Stats
+        {titleText}
       </div>
       <div className="px-3 py-3">
         <div className={`${SUNKEN_INNER} bg-white p-3`}>
