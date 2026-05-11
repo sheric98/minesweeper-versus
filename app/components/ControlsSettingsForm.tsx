@@ -77,7 +77,7 @@ export default function ControlsSettingsForm({ authLevel }: Props) {
         <button
           type="button"
           onClick={resetControls}
-          className={`px-4 py-1 cursor-pointer bg-[#c0c0c0] ${RAISED_INNER} active:${SUNKEN_INNER}`}
+          className={`px-4 py-1 cursor-pointer bg-[#c0c0c0] ${RAISED_INNER}`}
         >
           Reset to defaults
         </button>

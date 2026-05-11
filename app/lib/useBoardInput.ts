@@ -89,6 +89,10 @@ export function useBoardInput({
   const leftDownRef = useRef(false);
   const rightDownRef = useRef(false);
   const wasChordingRef = useRef(false);
+  // Suppresses the second click of a native double-click: boardRef.current
+  // hasn't yet flipped to "revealed" between click 1 and click 2, so without
+  // this guard both clicks would fire onReveal on the same cell.
+  const lastRevealRef = useRef<{ row: number; col: number; ts: number } | null>(null);
 
   const recomputeSunk = useCallback(() => {
     const showPreview = controlsRef.current.chordTrigger === "both-buttons";
@@ -148,6 +152,10 @@ export function useBoardInput({
     if (!b) return;
     const cell = b[row][col];
     if (cell.state === "revealed" || cell.state === "flagged" || cell.state === "question") return;
+    const now = Date.now();
+    const last = lastRevealRef.current;
+    if (last && last.row === row && last.col === col && now - last.ts < 300) return;
+    lastRevealRef.current = { row, col, ts: now };
     onRevealRef.current(row, col);
   }, []);
 
