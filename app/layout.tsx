@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import NavBar from "@/app/components/NavBar";
+import { ControlsProvider } from "@/app/components/ControlsProvider";
 
 export const metadata: Metadata = {
   title: "Minesweeper",
@@ -39,8 +40,10 @@ export default async function RootLayout({
       <body
         className="antialiased flex flex-col min-h-screen"
       >
-        <NavBar username={username} authLevel={authLevel} />
-        {children}
+        <ControlsProvider authLevel={authLevel}>
+          <NavBar username={username} authLevel={authLevel} />
+          {children}
+        </ControlsProvider>
         <Analytics />
       </body>
     </html>
