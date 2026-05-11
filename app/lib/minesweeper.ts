@@ -5,6 +5,7 @@ export const MINE_COUNT = 99;
 export type CellState =
   | "unrevealed"
   | "flagged"
+  | "question"
   | "revealed"
   | "mine"
   | "mine-clicked"
@@ -112,10 +113,10 @@ export function revealCell(board: Board, row: number, col: number): Board {
           const nc = c + dc;
           const key = `${nr},${nc}`;
           if (
-            nr >= 0 && nr < ROWS &&
-            nc >= 0 && nc < COLS &&
+            nr >= 0 && nr < next.length &&
+            nc >= 0 && nc < next[0].length &&
             !visited.has(key) &&
-            next[nr][nc].state === "unrevealed"
+            (next[nr][nc].state === "unrevealed" || next[nr][nc].state === "question")
           ) {
             visited.add(key);
             queue.push([nr, nc]);
@@ -128,12 +129,32 @@ export function revealCell(board: Board, row: number, col: number): Board {
   return next;
 }
 
-export function toggleFlag(board: Board, row: number, col: number): Board {
+export interface ToggleFlagOptions {
+  questionMarks: boolean;
+}
+
+export function toggleFlag(
+  board: Board,
+  row: number,
+  col: number,
+  opts: ToggleFlagOptions = { questionMarks: false },
+): Board {
   const cell = board[row][col];
-  if (cell.state !== "unrevealed" && cell.state !== "flagged") return board;
+  if (cell.state !== "unrevealed" && cell.state !== "flagged" && cell.state !== "question") {
+    return board;
+  }
 
   const next: Board = board.map(r => r.map(c => ({ ...c })));
-  next[row][col].state = cell.state === "unrevealed" ? "flagged" : "unrevealed";
+  const current = next[row][col].state;
+
+  if (opts.questionMarks) {
+    next[row][col].state =
+      current === "unrevealed" ? "flagged" :
+      current === "flagged"    ? "question" :
+                                 "unrevealed"; // question -> unrevealed
+  } else {
+    next[row][col].state = current === "flagged" ? "unrevealed" : "flagged";
+  }
   return next;
 }
 
@@ -201,10 +222,12 @@ export function chordReveal(board: Board, row: number, col: number): ChordResult
       if (dr === 0 && dc === 0) continue;
       const nr = row + dr;
       const nc = col + dc;
-      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+      if (nr < 0 || nr >= board.length || nc < 0 || nc >= board[0].length) continue;
       const neighbor = board[nr][nc];
       if (neighbor.state === "flagged") flagCount++;
-      else if (neighbor.state === "unrevealed") unrevealedNeighbors.push([nr, nc]);
+      else if (neighbor.state === "unrevealed" || neighbor.state === "question") {
+        unrevealedNeighbors.push([nr, nc]);
+      }
     }
   }
 
