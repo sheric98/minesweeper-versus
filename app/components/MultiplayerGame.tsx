@@ -18,6 +18,8 @@ import type { RematchState } from "@/app/components/GameOverModal";
 import { diffRevealedCells, decodeBoard, cooldownDuration } from "@/app/lib/multiplayer-utils";
 import useMockWebSocket from "@/app/lib/useMockWebSocket";
 import useWebSocket from "@/app/lib/useWebSocket";
+import { useBoardInput } from "@/app/lib/useBoardInput";
+import { useControls } from "@/app/components/ControlsProvider";
 
 // Use production WebSocket when WS_URL is configured, mock otherwise
 const useMultiplayerSocket = process.env.NEXT_PUBLIC_WS_URL
@@ -34,30 +36,6 @@ import GameOverModal from "@/app/components/GameOverModal";
 
 const TOTAL_SAFE_CELLS = ROWS * COLS - MINE_COUNT;
 
-function computeSunkCells(
-  hovered: { row: number; col: number } | null,
-  leftDown: boolean,
-  rightDown: boolean,
-  board: Board,
-  playing: boolean,
-): Set<string> {
-  if (!hovered || !leftDown || !playing) return new Set();
-  const { row, col } = hovered;
-  if (rightDown) {
-    const sunk = new Set<string>();
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const nr = row + dr;
-        const nc = col + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].state === "unrevealed") {
-          sunk.add(`${nr}-${nc}`);
-        }
-      }
-    }
-    return sunk;
-  }
-  return board[row][col].state === "unrevealed" ? new Set([`${row}-${col}`]) : new Set();
-}
 
 interface MultiplayerGameProps {
   matchId: string;
@@ -66,6 +44,8 @@ interface MultiplayerGameProps {
 }
 
 export default function MultiplayerGame({ matchId, playerName, authLevel }: MultiplayerGameProps) {
+  const { controls } = useControls();
+
   // -- State --
   const [board, setBoard] = useState<Board | null>(null);
   const [matchState, setMatchState] = useState<MatchState>("lobby");
@@ -76,7 +56,6 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
   const [deathCount, setDeathCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickLog, setClickLog] = useState<ClickLogEntry[]>([]);
-  const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [gameResult, setGameResult] = useState<{
     winner: string;
     yourTimeMs: number;
@@ -111,13 +90,6 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
     elapsedSecondsRef.current = elapsedSeconds;
     clickLogRef.current = clickLog;
   });
-
-  // Mouse tracking refs
-  const hoveredCellRef = useRef<{ row: number; col: number } | null>(null);
-  const mouseDownCellRef = useRef<{ row: number; col: number } | null>(null);
-  const leftDownRef = useRef(false);
-  const rightDownRef = useRef(false);
-  const wasChordingRef = useRef(false);
 
   // Store startingSquare for initial reveal after game_start
   const startingSquareRef = useRef<[number, number] | null>(null);
@@ -234,7 +206,6 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
           setDeathCount(0);
           setElapsedSeconds(0);
           setClickLog([]);
-          setSunkCells(new Set());
           setGameResult(null);
           setOpponentDeathCount(0);
           setOpponentDeathFlash(false);
@@ -310,18 +281,15 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
     return () => clearTimeout(id);
   }, [opponentDeathFlash]);
 
-  // -- Input handlers --
+  // -- Game-action callbacks --
 
-  const handleCellLeftClick = useCallback((row: number, col: number) => {
+  const handleReveal = useCallback((row: number, col: number) => {
     const currentBoard = boardRef.current;
     if (matchStateRef.current !== "playing" || !currentBoard) return;
     if (cooldownMsRef.current > 0) return;
 
     const cell = currentBoard[row][col];
-    if (cell.state === "revealed" || cell.state === "flagged") return;
-
     if (cell.isMine) {
-      // Mine hit — cooldown, NOT game over
       const newDeathCount = deathCountRef.current + 1;
       setDeathCount(newDeathCount);
       setCooldownMs(cooldownDuration(newDeathCount - 1));
@@ -346,187 +314,54 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
     }
   }, []);
 
-  const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
-    e.preventDefault();
+  const handleFlag = useCallback((row: number, col: number) => {
     if (matchStateRef.current !== "playing") return;
     if (cooldownMsRef.current > 0) return;
-    if (e.buttons & 1) return;
-    if (wasChordingRef.current) return;
-    setBoard(prev => (prev ? toggleFlag(prev, row, col) : prev));
+    setBoard(prev => (prev ? toggleFlag(prev, row, col, { questionMarks: controls.questionMarks }) : prev));
     setClickLog(prev => [...prev, { type: "flag", row, col, ts: Date.now() }]);
-  }, []);
+  }, [controls.questionMarks]);
 
-  // Reset button state when mouse is released outside the board
-  useEffect(() => {
-    const reset = () => {
-      leftDownRef.current = false;
-      rightDownRef.current = false;
-      mouseDownCellRef.current = null;
-      setSunkCells(new Set());
-    };
-    window.addEventListener("mouseup", reset);
-    return () => window.removeEventListener("mouseup", reset);
-  }, []);
-
-  const handleBoardMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!leftDownRef.current && !rightDownRef.current) wasChordingRef.current = false;
-    if (e.button === 0) {
-      leftDownRef.current = true;
-      mouseDownCellRef.current = hoveredCellRef.current;
-    }
-    if (e.button === 2) rightDownRef.current = true;
-    if (leftDownRef.current && rightDownRef.current) wasChordingRef.current = true;
-
+  const handleChord = useCallback((row: number, col: number) => {
     const currentBoard = boardRef.current;
-    if (currentBoard) {
-      setSunkCells(
-        computeSunkCells(
-          hoveredCellRef.current,
-          leftDownRef.current,
-          rightDownRef.current,
-          currentBoard,
-          matchStateRef.current === "playing" && cooldownMsRef.current <= 0,
-        ),
-      );
-    }
-  }, []);
-
-  const handleBoardMouseUp = useCallback((e: React.MouseEvent) => {
-    const wasChording = leftDownRef.current && rightDownRef.current;
-    const downCell = mouseDownCellRef.current;
-    if (e.button === 0) {
-      leftDownRef.current = false;
-      mouseDownCellRef.current = null;
-    }
-    if (e.button === 2) rightDownRef.current = false;
-
-    const currentBoard = boardRef.current;
-    if (currentBoard) {
-      setSunkCells(
-        computeSunkCells(
-          hoveredCellRef.current,
-          leftDownRef.current,
-          rightDownRef.current,
-          currentBoard,
-          matchStateRef.current === "playing" && cooldownMsRef.current <= 0,
-        ),
-      );
-    }
-
-    // Drag-release: left released on a different cell (no chord)
-    if (!wasChordingRef.current && !wasChording && e.button === 0) {
-      const hovered = hoveredCellRef.current;
-      if (hovered && downCell && (hovered.row !== downCell.row || hovered.col !== downCell.col)) {
-        handleCellLeftClick(hovered.row, hovered.col);
-        return;
-      }
-    }
-
-    if (!wasChording) return;
-
-    const hovered = hoveredCellRef.current;
-    if (!hovered) return;
     if (matchStateRef.current !== "playing" || !currentBoard) return;
     if (cooldownMsRef.current > 0) return;
 
-    const cell = currentBoard[hovered.row][hovered.col];
-    if (cell.state !== "revealed") return;
-
-    const result = chordReveal(currentBoard, hovered.row, hovered.col);
+    const result = chordReveal(currentBoard, row, col);
     if (!result) return;
 
     if (result.hit) {
-      // Mine hit during chord — don't update board, start cooldown
       const newDeathCount = deathCountRef.current + 1;
       setDeathCount(newDeathCount);
       setCooldownMs(cooldownDuration(newDeathCount - 1));
-      setClickLog(prev => [...prev, { type: "chord", row: hovered.row, col: hovered.col, ts: Date.now() }]);
-      sendRef.current({ type: "hit_mine", row: hovered.row, col: hovered.col, deathCount: newDeathCount });
+      setClickLog(prev => [...prev, { type: "chord", row, col, ts: Date.now() }]);
+      sendRef.current({ type: "hit_mine", row, col, deathCount: newDeathCount });
     } else {
       const newCells = diffRevealedCells(currentBoard, result.board);
       setBoard(result.board);
-      setClickLog(prev => [...prev, { type: "chord", row: hovered.row, col: hovered.col, ts: Date.now() }]);
-      sendRef.current({ type: "chord", row: hovered.row, col: hovered.col, resultCells: newCells });
+      setClickLog(prev => [...prev, { type: "chord", row, col, ts: Date.now() }]);
+      sendRef.current({ type: "chord", row, col, resultCells: newCells });
 
       if (checkWin(result.board)) {
         const timeMs = elapsedSecondsRef.current * 1000;
         sendRef.current({
           type: "game_complete",
           timeMs,
-          clickLog: [...clickLogRef.current, { type: "chord", row: hovered.row, col: hovered.col, ts: Date.now() }],
+          clickLog: [...clickLogRef.current, { type: "chord", row, col, ts: Date.now() }],
         });
       }
     }
-  }, [handleCellLeftClick]);
-
-  const handleCellMouseEnter = useCallback((row: number, col: number) => {
-    hoveredCellRef.current = { row, col };
-    const currentBoard = boardRef.current;
-    if (currentBoard) {
-      setSunkCells(
-        computeSunkCells(
-          { row, col },
-          leftDownRef.current,
-          rightDownRef.current,
-          currentBoard,
-          matchStateRef.current === "playing" && cooldownMsRef.current <= 0,
-        ),
-      );
-    }
   }, []);
 
-  const handleBoardMouseLeave = useCallback(() => {
-    hoveredCellRef.current = null;
-    setSunkCells(new Set());
-  }, []);
+  const enabled = matchState === "playing" && cooldownMs <= 0;
 
-  // Spacebar: flag unrevealed, or chord-reveal a numbered cell
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      const hovered = hoveredCellRef.current;
-      if (!hovered) return;
-      if (matchStateRef.current !== "playing") return;
-      if (cooldownMsRef.current > 0) return;
-
-      const currentBoard = boardRef.current;
-      if (!currentBoard) return;
-      const { row, col } = hovered;
-      const cell = currentBoard[row][col];
-
-      if (cell.state === "unrevealed" || cell.state === "flagged") {
-        setBoard(prev => (prev ? toggleFlag(prev, row, col) : prev));
-        setClickLog(prev => [...prev, { type: "flag", row, col, ts: Date.now() }]);
-      } else if (cell.state === "revealed") {
-        const result = chordReveal(currentBoard, row, col);
-        if (!result) return;
-        if (result.hit) {
-          const newDeathCount = deathCountRef.current + 1;
-          setDeathCount(newDeathCount);
-          setCooldownMs(cooldownDuration(newDeathCount - 1));
-          setClickLog(prev => [...prev, { type: "chord", row, col, ts: Date.now() }]);
-          sendRef.current({ type: "hit_mine", row, col, deathCount: newDeathCount });
-        } else {
-          const newCells = diffRevealedCells(currentBoard, result.board);
-          setBoard(result.board);
-          setClickLog(prev => [...prev, { type: "chord", row, col, ts: Date.now() }]);
-          sendRef.current({ type: "chord", row, col, resultCells: newCells });
-          if (checkWin(result.board)) {
-            const timeMs = elapsedSecondsRef.current * 1000;
-            sendRef.current({
-              type: "game_complete",
-              timeMs,
-              clickLog: [...clickLogRef.current, { type: "chord", row, col, ts: Date.now() }],
-            });
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const { boardHandlers, cellHandlers, sunkCells } = useBoardInput({
+    controls,
+    board,
+    enabled,
+    onReveal: handleReveal,
+    onFlag: handleFlag,
+    onChord: handleChord,
+  });
 
   // -- Rematch handlers --
   const handleRematchRequest = useCallback(() => {
@@ -603,12 +438,13 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
               board={board}
               phase={headerPhase}
               sunkCells={sunkCells}
-              onCellLeftClick={handleCellLeftClick}
-              onCellRightClick={handleCellRightClick}
-              onCellMouseEnter={handleCellMouseEnter}
-              onBoardMouseLeave={handleBoardMouseLeave}
-              onBoardMouseDown={handleBoardMouseDown}
-              onBoardMouseUp={handleBoardMouseUp}
+              onCellLeftClick={cellHandlers.onCellLeftClick}
+              onCellRightClick={cellHandlers.onCellRightClick}
+              onCellMouseEnter={cellHandlers.onCellMouseEnter}
+              onBoardMouseLeave={boardHandlers.onMouseLeave}
+              onBoardMouseDown={boardHandlers.onMouseDown}
+              onBoardMouseUp={boardHandlers.onMouseUp}
+              onBoardDoubleClick={boardHandlers.onDoubleClick}
             />
           ) : matchState === "countdown" && startingSquare ? (
             <CountdownBoard startingSquare={startingSquare} />
