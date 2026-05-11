@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import {
   Board,
   GamePhase,
   MINE_COUNT,
-  ROWS,
-  COLS,
   createEmptyBoard,
   generateBoard,
   revealCell,
@@ -18,6 +16,8 @@ import {
   chordReveal,
 } from "@/app/lib/minesweeper";
 import { decodeBoard } from "@/app/lib/multiplayer-utils";
+import { useBoardInput } from "@/app/lib/useBoardInput";
+import { useControls } from "@/app/components/ControlsProvider";
 import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
@@ -28,31 +28,6 @@ import * as PendingScore from "@/app/lib/pending-score";
 
 type GameMode = "random" | "no-guess";
 
-function computeSunkCells(
-  hovered: { row: number; col: number } | null,
-  leftDown: boolean,
-  rightDown: boolean,
-  board: Board,
-  phase: GamePhase,
-): Set<string> {
-  if (!hovered || !leftDown || phase === "won" || phase === "lost") return new Set();
-  const { row, col } = hovered;
-  if (rightDown) {
-    const sunk = new Set<string>();
-    for (let dr = -1; dr <= 1; dr++) {
-      for (let dc = -1; dc <= 1; dc++) {
-        const nr = row + dr;
-        const nc = col + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].state === "unrevealed") {
-          sunk.add(`${nr}-${nc}`);
-        }
-      }
-    }
-    return sunk;
-  }
-  return board[row][col].state === "unrevealed" ? new Set([`${row}-${col}`]) : new Set();
-}
-
 interface MinesweeperGameProps {
   authLevel?: "anonymous" | "google";
   username?: string;
@@ -60,10 +35,11 @@ interface MinesweeperGameProps {
 }
 
 export default function MinesweeperGame({ authLevel, username, mode = "random" }: MinesweeperGameProps) {
+  const { controls } = useControls();
+
   const [board, setBoard] = useState<Board>(() => createEmptyBoard());
   const [phase, setPhase] = useState<GamePhase>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [sunkCells, setSunkCells] = useState<Set<string>>(new Set());
   const [leaderboardRefreshKey, setLeaderboardRefreshKey] = useState(0);
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,22 +48,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const pathname = usePathname();
   const scoreSubmittedRef = useRef(false);
   const signInModalDismissedRef = useRef(false);
-  const isGeneratingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Stable refs so callbacks never go stale
-  const boardRef = useRef(board);
-  const phaseRef = useRef(phase);
-
-  // True once both buttons are simultaneously held; clears only on the next fresh press sequence
-  const wasChordingRef = useRef(false);
-
-  // Sync refs after every commit (not during render — satisfies react-hooks/refs)
-  useLayoutEffect(() => {
-    boardRef.current = board;
-    phaseRef.current = phase;
-    isGeneratingRef.current = isGenerating;
-  });
 
   const showLeaderboard = mode === "random" || mode === "no-guess";
 
@@ -103,7 +64,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         .then(() => setLeaderboardRefreshKey((k) => k + 1))
         .catch(() => {});
     }
-  }, [phase, authLevel, elapsedSeconds, mode, showLeaderboard]);
+  }, [phase, authLevel, elapsedSeconds, mode, showLeaderboard, difficulty]);
 
   // Open sign-in prompt when an anonymous user wins with a top-10 time.
   useEffect(() => {
@@ -111,7 +72,6 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     if (authLevel === "google") return;
     if (!showLeaderboard) return;
     if (signInModalDismissedRef.current) return;
-    // Treat empty/loading/failed as "qualifies" — over-prompt is the chosen default.
     const qualifies = scores.length < 10 || elapsedSeconds < scores[9].time_seconds;
     if (qualifies) setShowSignInModal(true);
   }, [phase, authLevel, showLeaderboard, scores, elapsedSeconds]);
@@ -140,7 +100,6 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
       .catch(() => {
         PendingScore.clear();
       });
-    // Run once on mount; intentionally no deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -160,17 +119,15 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     return () => { cancelled = true; };
   }, [leaderboardRefreshKey, mode, difficulty, showLeaderboard]);
 
-  // Timer: start when playing, stop otherwise
+  // Timer
   useEffect(() => {
     if (phase === "playing") {
       timerRef.current = setInterval(() => {
         setElapsedSeconds(s => Math.min(s + 1, 999));
       }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
     return () => {
       if (timerRef.current) {
@@ -180,61 +137,41 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     };
   }, [phase]);
 
-  const handleCellLeftClick = useCallback((row: number, col: number) => {
-    if (isGeneratingRef.current) return;
-    const currentPhase = phaseRef.current;
-    const currentBoard = boardRef.current;
+  // -- Game-action callbacks (passed into useBoardInput) --
 
-    if (currentPhase === "won" || currentPhase === "lost") return;
+  const handleReveal = useCallback((row: number, col: number) => {
+    if (isGenerating) return;
+    if (phase === "won" || phase === "lost") return;
 
-    const cell = currentBoard[row][col];
-    if (cell.state === "revealed" || cell.state === "flagged") return;
+    let workingBoard = board;
 
-    let workingBoard = currentBoard;
-
-    if (currentPhase === "idle") {
+    if (phase === "idle") {
       if (mode === "no-guess") {
         setIsGenerating(true);
         let resolved = false;
-
-        const applyBoard = (board: Board) => {
+        const applyBoard = (nb: Board) => {
           if (resolved) return;
           resolved = true;
-          const revealed = revealCell(board, row, col);
+          const revealed = revealCell(nb, row, col);
           setBoard(revealed);
           setPhase("playing");
           setIsGenerating(false);
-          if (checkWin(revealed)) {
-            setPhase("won");
-          }
+          if (checkWin(revealed)) setPhase("won");
         };
 
-        // Local generation in Web Worker (non-blocking)
         const worker = new Worker(
-          new URL("../lib/board-generator.worker.ts", import.meta.url)
+          new URL("../lib/board-generator.worker.ts", import.meta.url),
         );
-        worker.onmessage = (e) => {
-          worker.terminate();
-          applyBoard(e.data.board);
-        };
+        worker.onmessage = (e) => { worker.terminate(); applyBoard(e.data.board); };
         worker.onerror = () => worker.terminate();
         worker.postMessage({ startRow: row, startCol: col, difficulty });
 
-        // Server fallback (fires after 500ms if worker hasn't finished)
         setTimeout(() => {
           if (resolved) return;
           fetch(`/api/board?difficulty=${encodeURIComponent(difficulty)}&start_row=${row}&start_col=${col}`)
-            .then(res => {
-              if (!res.ok) throw new Error("Server error");
-              return res.json();
-            })
-            .then(data => {
-              worker.terminate();
-              applyBoard(decodeBoard(data.board));
-            })
-            .catch(() => {
-              // Ignore — worker generation will handle it
-            });
+            .then(res => { if (!res.ok) throw new Error("Server error"); return res.json(); })
+            .then(data => { worker.terminate(); applyBoard(decodeBoard(data.board)); })
+            .catch(() => {});
         }, 500);
         return;
       }
@@ -250,19 +187,37 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
 
     const nextBoard = revealCell(workingBoard, row, col);
     setBoard(nextBoard);
+    if (checkWin(nextBoard)) setPhase("won");
+  }, [board, phase, isGenerating, mode, difficulty]);
 
-    if (checkWin(nextBoard)) {
-      setPhase("won");
+  const handleFlag = useCallback((row: number, col: number) => {
+    if (phase !== "playing") return;
+    setBoard(prev => toggleFlag(prev, row, col, { questionMarks: controls.questionMarks }));
+  }, [phase, controls.questionMarks]);
+
+  const handleChord = useCallback((row: number, col: number) => {
+    if (phase !== "playing") return;
+    const result = chordReveal(board, row, col);
+    if (!result) return;
+    if (result.hit) {
+      setBoard(result.board);
+      setPhase("lost");
+    } else {
+      setBoard(result.board);
+      if (checkWin(result.board)) setPhase("won");
     }
-  }, [mode, difficulty]);
+  }, [board, phase]);
 
-  const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
-    e.preventDefault();
-    if (phaseRef.current !== "playing" || isGeneratingRef.current) return;
-    if (e.buttons & 1) return; // left button held — chording, not flagging
-    if (wasChordingRef.current) return; // chord just ended — suppress flag on second-button release
-    setBoard(prev => toggleFlag(prev, row, col));
-  }, []);
+  const enabled = !isGenerating && phase !== "won" && phase !== "lost";
+
+  const { boardHandlers, cellHandlers, sunkCells } = useBoardInput({
+    controls,
+    board,
+    enabled,
+    onReveal: handleReveal,
+    onFlag: handleFlag,
+    onChord: handleChord,
+  });
 
   const handleReset = useCallback(() => {
     setBoard(createEmptyBoard());
@@ -281,126 +236,6 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     scoreSubmittedRef.current = false;
     signInModalDismissedRef.current = false;
     setShowSignInModal(false);
-  }, []);
-
-  // Track hovered cell for spacebar/chord handling (ref to avoid re-renders)
-  const hoveredCellRef = useRef<{ row: number; col: number } | null>(null);
-
-  // Track the cell where left-mousedown started, to detect drag-releases
-  const mouseDownCellRef = useRef<{ row: number; col: number } | null>(null);
-
-  // Track held mouse buttons for two-button chord reveal
-  const leftDownRef = useRef(false);
-  const rightDownRef = useRef(false);
-
-  // Reset button state when mouse is released outside the board
-  useEffect(() => {
-    const reset = () => {
-      leftDownRef.current = false;
-      rightDownRef.current = false;
-      mouseDownCellRef.current = null;
-      setSunkCells(new Set());
-    };
-    window.addEventListener("mouseup", reset);
-    return () => window.removeEventListener("mouseup", reset);
-  }, []);
-
-  const handleBoardMouseDown = useCallback((e: React.MouseEvent) => {
-    // Fresh press sequence: clear chord memory when starting with both buttons up
-    if (!leftDownRef.current && !rightDownRef.current) wasChordingRef.current = false;
-    if (e.button === 0) {
-      leftDownRef.current = true;
-      mouseDownCellRef.current = hoveredCellRef.current;
-    }
-    if (e.button === 2) rightDownRef.current = true;
-    if (leftDownRef.current && rightDownRef.current) wasChordingRef.current = true;
-    setSunkCells(computeSunkCells(hoveredCellRef.current, leftDownRef.current, rightDownRef.current, boardRef.current, phaseRef.current));
-  }, []);
-
-  const handleBoardMouseUp = useCallback((e: React.MouseEvent) => {
-    const wasChording = leftDownRef.current && rightDownRef.current;
-    const downCell = mouseDownCellRef.current;
-    if (e.button === 0) {
-      leftDownRef.current = false;
-      mouseDownCellRef.current = null;
-    }
-    if (e.button === 2) rightDownRef.current = false;
-    setSunkCells(computeSunkCells(hoveredCellRef.current, leftDownRef.current, rightDownRef.current, boardRef.current, phaseRef.current));
-
-    // Drag-release: left released on a different cell — only if chord mode was never active
-    if (!wasChordingRef.current && !wasChording && e.button === 0) {
-      const hovered = hoveredCellRef.current;
-      if (hovered && downCell && (hovered.row !== downCell.row || hovered.col !== downCell.col)) {
-        handleCellLeftClick(hovered.row, hovered.col);
-        return;
-      }
-    }
-
-    if (!wasChording) return;
-
-    const hovered = hoveredCellRef.current;
-    if (!hovered) return;
-    if (phaseRef.current !== "playing") return;
-
-    const currentBoard = boardRef.current;
-    const cell = currentBoard[hovered.row][hovered.col];
-    if (cell.state !== "revealed") return;
-
-    const result = chordReveal(currentBoard, hovered.row, hovered.col);
-    if (!result) return;
-    if (result.hit) {
-      setBoard(result.board);
-      setPhase("lost");
-    } else {
-      setBoard(result.board);
-      if (checkWin(result.board)) setPhase("won");
-    }
-  }, [handleCellLeftClick]);
-
-  const handleCellMouseEnter = useCallback((row: number, col: number) => {
-    hoveredCellRef.current = { row, col };
-    setSunkCells(computeSunkCells({ row, col }, leftDownRef.current, rightDownRef.current, boardRef.current, phaseRef.current));
-  }, []);
-
-  const handleBoardMouseLeave = useCallback(() => {
-    hoveredCellRef.current = null;
-    setSunkCells(new Set());
-  }, []);
-
-  // Spacebar: flag unrevealed cell, or chord-reveal a numbered cell
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      e.preventDefault();
-      const hovered = hoveredCellRef.current;
-      if (!hovered) return;
-
-      const currentPhase = phaseRef.current;
-      if (currentPhase !== "playing") return;
-
-      const currentBoard = boardRef.current;
-      const { row, col } = hovered;
-      const cell = currentBoard[row][col];
-
-      if (cell.state === "unrevealed" || cell.state === "flagged") {
-        setBoard(prev => toggleFlag(prev, row, col));
-      } else if (cell.state === "revealed") {
-        const result = chordReveal(currentBoard, row, col);
-        if (!result) return;
-        if (result.hit) {
-          setBoard(result.board);
-          setPhase("lost");
-        } else {
-          setBoard(result.board);
-          if (checkWin(result.board)) {
-            setPhase("won");
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const flagsRemaining = MINE_COUNT - countFlags(board);
@@ -427,12 +262,13 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
           board={board}
           phase={phase}
           sunkCells={sunkCells}
-          onCellLeftClick={handleCellLeftClick}
-          onCellRightClick={handleCellRightClick}
-          onCellMouseEnter={handleCellMouseEnter}
-          onBoardMouseLeave={handleBoardMouseLeave}
-          onBoardMouseDown={handleBoardMouseDown}
-          onBoardMouseUp={handleBoardMouseUp}
+          onCellLeftClick={cellHandlers.onCellLeftClick}
+          onCellRightClick={cellHandlers.onCellRightClick}
+          onCellMouseEnter={cellHandlers.onCellMouseEnter}
+          onBoardMouseLeave={boardHandlers.onMouseLeave}
+          onBoardMouseDown={boardHandlers.onMouseDown}
+          onBoardMouseUp={boardHandlers.onMouseUp}
+          onBoardDoubleClick={boardHandlers.onDoubleClick}
         />
         {(isGenerating || phase === "won" || phase === "lost") && (
           <div className={`${SUNKEN_INNER} bg-black mt-2 px-4 py-1.5 font-mono font-bold text-center`}>
