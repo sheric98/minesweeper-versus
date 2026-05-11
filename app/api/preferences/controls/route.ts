@@ -52,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let backendRes: Response;
   try {
-    backendRes = await fetch(`${backendUrl}/api/preferences/controls`, {
+    backendRes = await fetch(`${backendUrl}/preferences/controls`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   let backendRes: Response;
   try {
-    backendRes = await fetch(`${backendUrl}/api/preferences/controls`, {
+    backendRes = await fetch(`${backendUrl}/preferences/controls`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
