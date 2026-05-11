@@ -74,6 +74,20 @@ const CellComponent = React.memo(function Cell({
     );
   }
 
+  if (state === "question") {
+    return (
+      <div
+        className={`${base} ${RAISED} bg-[#c0c0c0] cursor-default text-blue-700`}
+        style={sizeStyle}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+      >
+        ?
+      </div>
+    );
+  }
+
   if (state === "revealed") {
     const label = adjacentMines > 0 ? String(adjacentMines) : "";
     const color = adjacentMines > 0 ? NUMBER_COLORS[adjacentMines] : "";
