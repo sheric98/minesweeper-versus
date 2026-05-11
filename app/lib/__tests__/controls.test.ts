@@ -77,7 +77,7 @@ describe("parseControls", () => {
       spacebarAction: "flag-only",
       questionMarks: true,
     });
-    expect((result as Record<string, unknown>).extraGarbage).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>).extraGarbage).toBeUndefined();
   });
 
   it("accepts every documented enum value", () => {
