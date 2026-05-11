@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/no-guess", label: "No Guess" },
   { href: "/multiplayer", label: "Multiplayer" },
   { href: "/stats", label: "Stats" },
+  { href: "/settings", label: "Settings" },
 ];
 
 interface Props {
