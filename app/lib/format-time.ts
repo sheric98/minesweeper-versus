@@ -6,6 +6,6 @@
 export function formatSecondsAsMmSs(s: number | null | undefined): string {
   if (s === null || s === undefined) return "—";
   const minutes = Math.floor(s / 60);
-  const seconds = s % 60;
+  const seconds = Math.floor(s % 60);
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
