@@ -46,24 +46,39 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [difficulty, setDifficulty] = useState<NoGuessDifficulty>("beginner");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const pathname = usePathname();
-  const scoreSubmittedRef = useRef(false);
+  const clientGameIdRef = useRef<string | null>(null);
+  const submittedRef = useRef(false);
   const signInModalDismissedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const showLeaderboard = mode === "random" || mode === "no-guess";
 
-  // Submit score on win
+  // Submit completed game (win OR loss) on terminal phase, for Google-auth users.
   useEffect(() => {
-    if (phase === "won" && authLevel === "google" && showLeaderboard && !scoreSubmittedRef.current) {
-      scoreSubmittedRef.current = true;
-      fetch("/api/leaderboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ time_seconds: elapsedSeconds, mode, ...(mode === "no-guess" && { difficulty }) }),
+    if (phase !== "won" && phase !== "lost") return;
+    if (authLevel !== "google") return;
+    if (!showLeaderboard) return;
+    if (!clientGameIdRef.current) return;
+    if (submittedRef.current) return;
+    submittedRef.current = true;
+
+    const result: "win" | "loss" = phase === "won" ? "win" : "loss";
+    const submitDifficulty = mode === "no-guess" ? difficulty : "standard";
+    fetch("/api/singleplayer/games", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode,
+        difficulty: submitDifficulty,
+        result,
+        time_seconds: result === "win" ? elapsedSeconds : null,
+        client_game_id: clientGameIdRef.current,
+      }),
+    })
+      .then(() => {
+        if (result === "win") setLeaderboardRefreshKey((k) => k + 1);
       })
-        .then(() => setLeaderboardRefreshKey((k) => k + 1))
-        .catch(() => {});
-    }
+      .catch(() => {});
   }, [phase, authLevel, elapsedSeconds, mode, showLeaderboard, difficulty]);
 
   // Open sign-in prompt when an anonymous user wins with a top-10 time.
@@ -84,13 +99,15 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
       PendingScore.clear();
       return;
     }
-    fetch("/api/leaderboard", {
+    fetch("/api/singleplayer/games", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        time_seconds: pending.time_seconds,
         mode: pending.mode,
-        ...(pending.difficulty && { difficulty: pending.difficulty }),
+        difficulty: pending.difficulty,
+        result: pending.result,
+        time_seconds: pending.time_seconds,
+        client_game_id: pending.client_game_id,
       }),
     })
       .then(() => {
@@ -154,6 +171,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
           resolved = true;
           const revealed = revealCell(nb, row, col);
           setBoard(revealed);
+          clientGameIdRef.current = crypto.randomUUID();
           setPhase("playing");
           setIsGenerating(false);
           if (checkWin(revealed)) setPhase("won");
@@ -176,6 +194,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         return;
       }
       workingBoard = generateBoard(row, col);
+      clientGameIdRef.current = crypto.randomUUID();
       setPhase("playing");
     }
 
@@ -223,7 +242,8 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setBoard(createEmptyBoard());
     setPhase("idle");
     setElapsedSeconds(0);
-    scoreSubmittedRef.current = false;
+    clientGameIdRef.current = null;
+    submittedRef.current = false;
     signInModalDismissedRef.current = false;
     setShowSignInModal(false);
   }, []);
@@ -233,7 +253,8 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setBoard(createEmptyBoard());
     setPhase("idle");
     setElapsedSeconds(0);
-    scoreSubmittedRef.current = false;
+    clientGameIdRef.current = null;
+    submittedRef.current = false;
     signInModalDismissedRef.current = false;
     setShowSignInModal(false);
   }, []);
@@ -301,11 +322,15 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
             setShowSignInModal(false);
           }}
           onSignIn={() => {
-            PendingScore.write({
-              time_seconds: elapsedSeconds,
-              mode,
-              ...(mode === "no-guess" && { difficulty }),
-            });
+            if (clientGameIdRef.current) {
+              PendingScore.write({
+                mode,
+                difficulty: mode === "no-guess" ? difficulty : "standard",
+                result: "win",
+                time_seconds: elapsedSeconds,
+                client_game_id: clientGameIdRef.current,
+              });
+            }
             const next = pathname || "/";
             window.location.assign(`/api/auth/google/init?next=${encodeURIComponent(next)}`);
           }}

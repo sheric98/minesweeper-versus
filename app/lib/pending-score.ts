@@ -2,27 +2,28 @@ const KEY = "minesweeper.pendingScore";
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 export type PendingScoreInput = {
-  time_seconds: number;
   mode: "random" | "no-guess";
-  difficulty?: "beginner" | "intermediate" | "advanced" | "expert";
+  difficulty: "standard" | "beginner" | "intermediate" | "advanced" | "expert";
+  result: "win" | "loss";
+  time_seconds: number | null;
+  client_game_id: string;
 };
 
 export type PendingScore = PendingScoreInput & { expiresAt: number };
 
+const VALID_DIFFICULTIES = new Set([
+  "standard", "beginner", "intermediate", "advanced", "expert",
+]);
+
 function isValid(value: unknown): value is PendingScore {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  if (typeof v.time_seconds !== "number") return false;
   if (v.mode !== "random" && v.mode !== "no-guess") return false;
-  if (
-    v.difficulty !== undefined &&
-    v.difficulty !== "beginner" &&
-    v.difficulty !== "intermediate" &&
-    v.difficulty !== "advanced" &&
-    v.difficulty !== "expert"
-  ) {
-    return false;
-  }
+  if (typeof v.difficulty !== "string" || !VALID_DIFFICULTIES.has(v.difficulty)) return false;
+  if (v.result !== "win" && v.result !== "loss") return false;
+  if (v.result === "win" && typeof v.time_seconds !== "number") return false;
+  if (v.result === "loss" && v.time_seconds !== null) return false;
+  if (typeof v.client_game_id !== "string") return false;
   if (typeof v.expiresAt !== "number") return false;
   return true;
 }
