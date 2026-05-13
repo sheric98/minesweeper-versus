@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import HeadToHeadTable from "@/app/components/HeadToHeadTable";
 import PlayerSearch from "@/app/components/PlayerSearch";
+import SingleplayerStatsTable from "@/app/components/SingleplayerStatsTable";
 import StatsSummary from "@/app/components/StatsSummary";
 
 export default async function StatsPage() {
@@ -30,6 +31,7 @@ export default async function StatsPage() {
       <div className="flex flex-col gap-4 w-full max-w-2xl">
         <PlayerSearch />
         <StatsSummary username={username} />
+        <SingleplayerStatsTable />
         <HeadToHeadTable />
       </div>
     </main>
