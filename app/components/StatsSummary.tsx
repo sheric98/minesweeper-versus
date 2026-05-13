@@ -86,12 +86,10 @@ export default function StatsSummary({ username, isOwnStats = true }: StatsSumma
       ? "Unranked"
       : `#${rank}`;
 
-  const titleText = isOwnStats || !username ? "Stats" : `${username} — Stats`;
-
   return (
     <div className={`${RAISED_OUTER} bg-[#c0c0c0] flex flex-col w-full`}>
       <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none">
-        {titleText}
+        Multiplayer
       </div>
       <div className="px-3 py-3">
         <div className={`${SUNKEN_INNER} bg-white p-3`}>
