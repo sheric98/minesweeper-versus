@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import PlayerSearch from "@/app/components/PlayerSearch";
+import SingleplayerStatsTable from "@/app/components/SingleplayerStatsTable";
 import StatsSummary from "@/app/components/StatsSummary";
 import TopOpponentsTable from "@/app/components/TopOpponentsTable";
 
@@ -40,6 +41,7 @@ export default async function PlayerStatsPage({
     <main className="bg-[#c0c0c0] flex flex-1 flex-col items-center py-6 px-4 gap-4">
       <div className="flex flex-col gap-4 w-full max-w-2xl">
         <PlayerSearch />
+        <SingleplayerStatsTable username={routeUsername} />
         <StatsSummary username={routeUsername} isOwnStats={false} />
         <TopOpponentsTable targetUsername={routeUsername} />
       </div>

@@ -30,8 +30,8 @@ export default async function StatsPage() {
     <main className="bg-[#c0c0c0] flex flex-1 flex-col items-center py-6 px-4 gap-4">
       <div className="flex flex-col gap-4 w-full max-w-2xl">
         <PlayerSearch />
-        <StatsSummary username={username} />
         <SingleplayerStatsTable />
+        <StatsSummary username={username} />
         <HeadToHeadTable />
       </div>
     </main>

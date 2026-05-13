@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { emptyCategories } from "@/app/api/singleplayer/_empty-categories";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const token = request.cookies.get("session")?.value;
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const username = request.nextUrl.searchParams.get("username");
+  if (!username) {
+    return NextResponse.json({ error: "Missing username" }, { status: 400 });
   }
 
   const backendUrl = process.env.BACKEND_URL;
@@ -14,12 +14,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let backendRes: Response;
   try {
-    backendRes = await fetch(`${backendUrl}/singleplayer/stats/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
+    backendRes = await fetch(
+      `${backendUrl}/singleplayer/stats/player?username=${encodeURIComponent(username)}`,
+      { cache: "no-store" },
+    );
   } catch (err) {
-    console.error("[singleplayer/stats/me] Backend unreachable:", err);
+    console.error("[singleplayer/stats/player] Backend unreachable:", err);
     return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
   }
 
