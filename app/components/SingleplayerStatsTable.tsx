@@ -49,7 +49,11 @@ function windowSubtext(c: Category): string {
   return `(last ${c.recent_count})`;
 }
 
-export default function SingleplayerStatsTable() {
+interface Props {
+  username?: string;
+}
+
+export default function SingleplayerStatsTable({ username }: Props = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [data, setData] = useState<Category[]>([]);
@@ -57,9 +61,15 @@ export default function SingleplayerStatsTable() {
 
   useEffect(() => {
     let cancelled = false;
+    // Reset loading/error on each refetch so users see the skeleton while
+    // navigating between player pages, instead of stale data from the previous user.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(false);
-    fetch("/api/singleplayer/stats/me", { cache: "no-store" })
+    const url = username
+      ? `/api/singleplayer/stats/player?username=${encodeURIComponent(username)}`
+      : "/api/singleplayer/stats/me";
+    fetch(url, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<StatsResponse>) : Promise.reject(new Error("stats failed"))))
       .then((d) => {
         if (cancelled) return;
@@ -74,7 +84,7 @@ export default function SingleplayerStatsTable() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, username]);
 
   // Order categories canonically; fill missing with zeroed rows.
   const byKey = new Map(data.map((c) => [categoryKey(c), c]));
