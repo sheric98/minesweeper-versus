@@ -15,6 +15,7 @@ interface Player {
   username: string;
   status: "online" | "in_game" | "queued";
   rating?: number;
+  isBot?: boolean;
 }
 
 interface Invite {
@@ -414,6 +415,11 @@ export default function MatchmakingLobby() {
                       className={`text-sm font-mono ${unavailable ? "text-ms-dark group-hover:text-gray-400" : ""}`}
                     >
                       {player.username}
+                      {player.isBot && (
+                        <span className="text-xs ml-1 font-bold text-orange-600 group-hover:text-orange-300">
+                          [BOT]
+                        </span>
+                      )}
                       {player.rating != null && (
                         <span className="text-xs ml-1 text-[#808080] group-hover:text-gray-300">
                           ({player.rating})

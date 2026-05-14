@@ -46,6 +46,7 @@ export type ServerMessage =
       type: "match_found";
       matchId: string;
       opponent: string;
+      opponentIsBot: boolean;
       startingSquare: [number, number];
     }
   | { type: "countdown"; secondsRemaining: number }

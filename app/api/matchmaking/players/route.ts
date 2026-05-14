@@ -20,7 +20,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const mockPlayers = [
       { username: "sweeper42", status: "online" as const },
       { username: "minehunter", status: "online" as const },
+      { username: "perfect_fast", status: "online" as const, isBot: true },
       { username: "flag_master", status: "online" as const },
+      { username: "kamikaze_slow", status: "online" as const, isBot: true },
       { username: "kaboom_king", status: "in_game" as const },
     ].filter(p => p.username !== self);
 

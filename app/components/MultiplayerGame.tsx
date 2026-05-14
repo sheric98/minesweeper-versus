@@ -62,6 +62,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
     opponentTimeMs: number;
   } | null>(null);
   const [opponentName, setOpponentName] = useState("");
+  const [opponentIsBot, setOpponentIsBot] = useState(false);
   const [opponentDeathCount, setOpponentDeathCount] = useState(0);
   const [opponentDeathFlash, setOpponentDeathFlash] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
@@ -105,6 +106,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
       switch (msg.type) {
         case "match_found":
           setOpponentName(msg.opponent);
+          setOpponentIsBot(msg.opponentIsBot);
           opponentNameRef.current = msg.opponent;
           startingSquareRef.current = msg.startingSquare;
           setStartingSquare(msg.startingSquare);
@@ -471,6 +473,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
             className="flex items-center justify-center px-2 py-1.5 border-4 bg-rose-200 border-t-rose-100 border-l-rose-100 border-b-rose-300 border-r-rose-300 text-sm font-bold font-mono w-full"
           >
             {opponentName || "Opponent"}
+            {opponentIsBot && <span className="text-xs ml-1 font-bold text-orange-600">[BOT]</span>}
             {opponentElo != null && <span className="font-normal text-xs ml-1">({opponentElo})</span>}
           </div>
           <div
@@ -518,7 +521,7 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
           {/* Opponent progress */}
           <div className="flex items-center gap-2 font-mono text-sm">
             <span className="w-24 text-right truncate font-bold text-rose-500">
-              {opponentName || "Opponent"}{opponentElo != null && <span className="font-normal text-xs text-ms-dark"> ({opponentElo})</span>}
+              {opponentName || "Opponent"}{opponentIsBot && <span className="text-xs font-bold text-orange-600 ml-1">[BOT]</span>}{opponentElo != null && <span className="font-normal text-xs text-ms-dark"> ({opponentElo})</span>}
             </span>
             <div className={`flex-1 h-7 bg-[#c0c0c0] ${SUNKEN_INNER} relative`}>
               <div

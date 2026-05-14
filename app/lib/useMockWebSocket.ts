@@ -66,6 +66,7 @@ export default function useMockWebSocket({
       type: "match_found",
       matchId,
       opponent: "CPU_Player",
+      opponentIsBot: true,
       startingSquare: [startRow, startCol],
     });
 
