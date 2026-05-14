@@ -9,8 +9,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const backendUrl = process.env.BACKEND_URL;
 
   if (!backendUrl) {
-    // Mock mode
-    return NextResponse.json({ username, rating: 1200, wins: 5, losses: 3 });
+    // Mock mode — bot usernames mirror those in matchmaking/players mock.
+    const mockBots = new Set(["perfect_fast", "kamikaze_slow"]);
+    return NextResponse.json({
+      username,
+      rating: 1200,
+      wins: 5,
+      losses: 3,
+      isBot: mockBots.has(username),
+    });
   }
 
   let backendRes: Response;

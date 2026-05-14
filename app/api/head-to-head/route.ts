@@ -23,7 +23,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Mock paginated records — same data regardless of target username
     const mockRecords = [
       { opponent: "sweeper42", wins: 5, losses: 3, total_games: 8 },
+      { opponent: "perfect_fast", wins: 0, losses: 7, total_games: 7, isBot: true },
       { opponent: "minehunter", wins: 2, losses: 4, total_games: 6 },
+      { opponent: "kamikaze_slow", wins: 4, losses: 1, total_games: 5, isBot: true },
       { opponent: "flag_master", wins: 3, losses: 1, total_games: 4 },
       { opponent: "kaboom_king", wins: 1, losses: 2, total_games: 3 },
     ];

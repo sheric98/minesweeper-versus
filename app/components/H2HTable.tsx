@@ -3,6 +3,7 @@ export interface H2HRecord {
   wins: number;
   losses: number;
   total_games: number;
+  isBot?: boolean;
 }
 
 interface H2HTableProps {
@@ -54,7 +55,14 @@ export default function H2HTable({
           !error &&
           records.map((r) => (
             <tr key={r.opponent} className="border-b border-[#e0e0e0] hover:bg-[#e8e8e8]">
-              <td className="text-left py-1 truncate max-w-[10rem]">{r.opponent}</td>
+              <td className="text-left py-1 truncate max-w-[10rem]">
+                {r.opponent}
+                {r.isBot && (
+                  <span className="text-[10px] ml-1 font-bold text-orange-600">
+                    [BOT]
+                  </span>
+                )}
+              </td>
               <td className="text-right py-1">{r.wins}</td>
               <td className="text-right py-1">{r.losses}</td>
               <td className="text-right py-1">{r.total_games}</td>
