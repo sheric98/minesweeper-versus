@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <main className="flex-1">
+    <main className="flex-1 bg-[#c0c0c0] flex flex-col items-center py-6 px-4">
       <ControlsSettingsForm authLevel={authLevel} />
     </main>
   );
