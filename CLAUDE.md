@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev      # Start development server (http://localhost:3000)
+npm run dev:full # Dev server pointed at a local Flask backend
 npm run build    # Build for production
 npm run start    # Start production server
 npm run lint     # Run ESLint
+npm test         # Run vitest unit tests (app/lib/__tests__)
 ```
-
-No test framework is configured yet.
 
 ## Stack
 

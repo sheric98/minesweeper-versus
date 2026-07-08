@@ -21,6 +21,7 @@ import { useControls } from "@/app/components/ControlsProvider";
 import { SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
+import HowToPlayHint from "@/app/components/HowToPlayHint";
 import Leaderboard, { type LeaderboardEntry } from "@/app/components/Leaderboard";
 import DifficultySelector, { type NoGuessDifficulty } from "@/app/components/DifficultySelector";
 import PostWinSignInModal from "@/app/components/PostWinSignInModal";
@@ -305,6 +306,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
             {!isGenerating && phase === "lost" && <span className="text-red-500">Game over.</span>}
           </div>
         )}
+        <HowToPlayHint />
       </div>
       {showLeaderboard && (
         <Leaderboard

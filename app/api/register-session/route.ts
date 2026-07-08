@@ -16,6 +16,10 @@ function validateUsername(
   return { ok: true, username: trimmed };
 }
 
+function clientIp(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+}
+
 // Dev-only placeholder: NOT a real JWT. Used when BACKEND_URL is not set.
 // Once BACKEND_URL is configured, this branch is never reached.
 function mockToken(username: string): string {
@@ -55,9 +59,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // session cookie as `Authorization: Bearer <token>` to the backend.
     let backendRes: Response;
     try {
+      // X-Client-IP: the backend rate-limits this unauthenticated endpoint
+      // per end-user IP; without this header it only sees Vercel's egress IP.
       backendRes = await fetch(`${backendUrl}/auth/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Client-IP": clientIp(request),
+        },
         body: JSON.stringify({ username }),
       });
     } catch (err) {

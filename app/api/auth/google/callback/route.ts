@@ -161,9 +161,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let backendRes: Response;
   try {
+    // X-Client-IP: the backend rate-limits this unauthenticated endpoint
+    // per end-user IP; without this header it only sees Vercel's egress IP.
     backendRes = await fetch(`${backendUrl}/auth/google`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-IP":
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "",
+      },
       body: JSON.stringify({
         google_id: idClaims.sub,
         email: idClaims.email,

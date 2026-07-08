@@ -5,9 +5,30 @@ import { Analytics } from "@vercel/analytics/react";
 import NavBar from "@/app/components/NavBar";
 import { ControlsProvider } from "@/app/components/ControlsProvider";
 
+// Same env var the OAuth callback uses for redirects; localhost fallback
+// keeps `next build` working without it. og/twitter images come from
+// app/opengraph-image.tsx and app/twitter-image.tsx automatically.
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "Minesweeper",
-  description: "Classic Minesweeper — 30×16 board, 99 mines",
+  description:
+    "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
+  openGraph: {
+    title: "Minesweeper",
+    description:
+      "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
+    url: "/",
+    siteName: "Minesweeper",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Minesweeper",
+    description:
+      "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
+  },
 };
 
 export const viewport: Viewport = {
