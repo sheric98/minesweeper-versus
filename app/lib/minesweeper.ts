@@ -1,6 +1,21 @@
-export const ROWS = 16;
-export const COLS = 30;
-export const MINE_COUNT = 99;
+export interface BoardConfig {
+  rows: number;
+  cols: number;
+  mines: number;
+}
+
+export type BoardSizePreset = "beginner" | "intermediate" | "expert";
+
+export const BOARD_PRESETS: Record<BoardSizePreset, BoardConfig> = {
+  beginner: { rows: 9, cols: 9, mines: 10 },
+  intermediate: { rows: 16, cols: 16, mines: 40 },
+  expert: { rows: 16, cols: 30, mines: 99 },
+};
+
+// Expert-board constants; multiplayer and the no-guess generator are fixed to this size.
+export const ROWS = BOARD_PRESETS.expert.rows;
+export const COLS = BOARD_PRESETS.expert.cols;
+export const MINE_COUNT = BOARD_PRESETS.expert.mines;
 
 export type CellState =
   | "unrevealed"
@@ -21,9 +36,9 @@ export type Board = Cell[][];
 
 export type GamePhase = "idle" | "playing" | "won" | "lost";
 
-export function createEmptyBoard(): Board {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, (): Cell => ({
+export function createEmptyBoard(config: BoardConfig = BOARD_PRESETS.expert): Board {
+  return Array.from({ length: config.rows }, () =>
+    Array.from({ length: config.cols }, (): Cell => ({
       isMine: false,
       adjacentMines: 0,
       state: "unrevealed",
@@ -31,8 +46,13 @@ export function createEmptyBoard(): Board {
   );
 }
 
-export function generateBoard(firstRow: number, firstCol: number): Board {
-  const board = createEmptyBoard();
+export function generateBoard(
+  firstRow: number,
+  firstCol: number,
+  config: BoardConfig = BOARD_PRESETS.expert,
+): Board {
+  const { rows, cols, mines } = config;
+  const board = createEmptyBoard(config);
 
   // Build safe zone: clicked cell + all 8 neighbors
   const safeSet = new Set<string>();
@@ -40,7 +60,7 @@ export function generateBoard(firstRow: number, firstCol: number): Board {
     for (let dc = -1; dc <= 1; dc++) {
       const r = firstRow + dr;
       const c = firstCol + dc;
-      if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+      if (r >= 0 && r < rows && c >= 0 && c < cols) {
         safeSet.add(`${r},${c}`);
       }
     }
@@ -48,8 +68,8 @@ export function generateBoard(firstRow: number, firstCol: number): Board {
 
   // Collect non-safe candidate positions
   const candidates: [number, number][] = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       if (!safeSet.has(`${r},${c}`)) {
         candidates.push([r, c]);
       }
@@ -63,14 +83,14 @@ export function generateBoard(firstRow: number, firstCol: number): Board {
   }
 
   // Place mines
-  for (let i = 0; i < MINE_COUNT; i++) {
+  for (let i = 0; i < mines; i++) {
     const [r, c] = candidates[i];
     board[r][c].isMine = true;
   }
 
   // Compute adjacentMines for every non-mine cell
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       if (board[r][c].isMine) continue;
       let count = 0;
       for (let dr = -1; dr <= 1; dr++) {
@@ -78,7 +98,7 @@ export function generateBoard(firstRow: number, firstCol: number): Board {
           if (dr === 0 && dc === 0) continue;
           const nr = r + dr;
           const nc = c + dc;
-          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].isMine) {
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].isMine) {
             count++;
           }
         }
@@ -159,8 +179,8 @@ export function toggleFlag(
 }
 
 export function checkWin(board: Board): boolean {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
       const cell = board[r][c];
       if (!cell.isMine && cell.state !== "revealed") return false;
     }
@@ -175,8 +195,8 @@ export function revealAllMines(
 ): Board {
   const next: Board = board.map(r => r.map(c => ({ ...c })));
 
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < next.length; r++) {
+    for (let c = 0; c < next[0].length; c++) {
       const cell = next[r][c];
       if (r === clickedRow && c === clickedCol) {
         cell.state = "mine-clicked";
@@ -193,8 +213,8 @@ export function revealAllMines(
 
 export function countFlags(board: Board): number {
   let count = 0;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < board.length; r++) {
+    for (let c = 0; c < board[0].length; c++) {
       if (board[r][c].state === "flagged") count++;
     }
   }

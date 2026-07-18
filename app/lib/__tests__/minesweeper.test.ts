@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  BOARD_PRESETS,
+  checkWin,
+  countFlags,
   createEmptyBoard,
   toggleFlag,
   chordReveal,
@@ -75,5 +78,47 @@ describe("chordReveal with question marks", () => {
     expect(result).not.toBeNull();
     expect(result!.hit).toBe(false);
     expect(result!.board[0][1].state).toBe("revealed");
+  });
+});
+
+describe("board size presets", () => {
+  it("defines the three classic presets", () => {
+    expect(BOARD_PRESETS.beginner).toEqual({ rows: 9, cols: 9, mines: 10 });
+    expect(BOARD_PRESETS.intermediate).toEqual({ rows: 16, cols: 16, mines: 40 });
+    expect(BOARD_PRESETS.expert).toEqual({ rows: 16, cols: 30, mines: 99 });
+  });
+
+  it("createEmptyBoard respects the config", () => {
+    const b = createEmptyBoard(BOARD_PRESETS.beginner);
+    expect(b.length).toBe(9);
+    expect(b[0].length).toBe(9);
+  });
+
+  it("createEmptyBoard defaults to expert", () => {
+    const b = createEmptyBoard();
+    expect(b.length).toBe(16);
+    expect(b[0].length).toBe(30);
+  });
+
+  it("generateBoard places the configured mine count with a safe first click", () => {
+    const b = generateBoard(4, 4, BOARD_PRESETS.beginner);
+    expect(b.length).toBe(9);
+    expect(b[0].length).toBe(9);
+    let mines = 0;
+    for (const row of b) for (const cell of row) if (cell.isMine) mines++;
+    expect(mines).toBe(10);
+    for (let dr = -1; dr <= 1; dr++)
+      for (let dc = -1; dc <= 1; dc++)
+        expect(b[4 + dr][4 + dc].isMine).toBe(false);
+  });
+
+  it("checkWin and countFlags work on non-expert dimensions", () => {
+    let b = generateBoard(4, 4, BOARD_PRESETS.beginner);
+    // reveal every non-mine cell directly
+    b = b.map(row => row.map(c => (c.isMine ? c : { ...c, state: "revealed" as const })));
+    expect(checkWin(b)).toBe(true);
+    // (0,0) is either a mine (unrevealed, flaggable) or a revealed cell (no-op)
+    b = toggleFlag(b, 0, 0);
+    expect(countFlags(b)).toBeLessThanOrEqual(1);
   });
 });
