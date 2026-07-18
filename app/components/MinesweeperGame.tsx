@@ -265,7 +265,10 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   return (
     <div
       className="flex flex-col xl:flex-row items-center xl:items-start gap-4 select-none"
-      style={{ "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)" } as CSSProperties}
+      style={{
+        "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)",
+        "--board-width": "calc(30 * var(--cell-size) + 8px)",
+      } as CSSProperties}
     >
       <div className="flex flex-col items-center gap-0">
         {mode === "no-guess" && (

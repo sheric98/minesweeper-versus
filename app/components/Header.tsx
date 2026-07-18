@@ -1,4 +1,4 @@
-import { GamePhase, COLS } from "@/app/lib/minesweeper";
+import { GamePhase } from "@/app/lib/minesweeper";
 import { RAISED_INNER, SUNKEN_INNER } from "@/app/lib/win95";
 
 const FACE: Record<GamePhase, string> = {
@@ -34,7 +34,7 @@ export default function Header({ flagsRemaining, elapsedSeconds, phase, onReset,
   return (
     <div
       className={`flex items-center justify-between px-2 py-1.5 border-4 ${accent}`}
-      style={{ width: `calc(${COLS} * var(--cell-size) + 8px)` }}
+      style={{ width: "var(--board-width)" }}
     >
       {/* Flag counter */}
       <div className={`${SUNKEN_PANEL} bg-black px-1 py-0.5 font-mono text-red-600 text-xl leading-none min-w-[3ch] text-right`}>

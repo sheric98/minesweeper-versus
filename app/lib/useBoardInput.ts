@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  type Board,
-  ROWS,
-  COLS,
-} from "@/app/lib/minesweeper";
+import { type Board } from "@/app/lib/minesweeper";
 import type { ControlsPrefs } from "@/app/lib/controls";
 
 function computeSunkCells(
@@ -24,7 +20,7 @@ function computeSunkCells(
       for (let dc = -1; dc <= 1; dc++) {
         const nr = row + dr;
         const nc = col + dc;
-        if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].state === "unrevealed") {
+        if (nr >= 0 && nr < board.length && nc >= 0 && nc < board[0].length && board[nr][nc].state === "unrevealed") {
           sunk.add(`${nr}-${nc}`);
         }
       }

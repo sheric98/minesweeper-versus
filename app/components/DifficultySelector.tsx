@@ -1,4 +1,3 @@
-import { COLS } from "@/app/lib/minesweeper";
 import { RAISED_INNER, SUNKEN_INNER } from "@/app/lib/win95";
 
 export type NoGuessDifficulty = "beginner" | "intermediate" | "advanced" | "expert";
@@ -19,7 +18,7 @@ export default function DifficultySelector({ difficulty, onDifficultyChange }: D
   return (
     <div
       className="flex"
-      style={{ width: `calc(${COLS} * var(--cell-size) + 8px)` }}
+      style={{ width: "var(--board-width)" }}
     >
       {DIFFICULTIES.map(({ value, label }) => {
         const isActive = value === difficulty;

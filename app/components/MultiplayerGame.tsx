@@ -404,7 +404,10 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
   return (
     <div
       className="flex flex-col items-center gap-4 select-none relative"
-      style={{ "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)" } as CSSProperties}
+      style={{
+        "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)",
+        "--board-width": "calc(30 * var(--cell-size) + 8px)",
+      } as CSSProperties}
     >
       {/* Connection status indicator */}
       <div className="fixed top-16 right-4 flex items-center gap-2 text-sm font-mono text-ms-dark z-50">
