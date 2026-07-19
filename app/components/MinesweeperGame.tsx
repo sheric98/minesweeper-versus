@@ -44,6 +44,16 @@ const NO_GUESS_OPTIONS: { value: NoGuessDifficulty; label: string }[] = [
   { value: "expert", label: "Expert" },
 ];
 
+// Fire-and-forget: registers the server-side start timestamp used to
+// sanity-check win times before they reach the leaderboard.
+function registerGameStart(clientGameId: string) {
+  fetch("/api/singleplayer/games/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_game_id: clientGameId }),
+  }).catch(() => {});
+}
+
 interface MinesweeperGameProps {
   authLevel?: "anonymous" | "google";
   username?: string;
@@ -196,6 +206,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random", 
           const revealed = revealCell(nb, row, col);
           setBoard(revealed);
           clientGameIdRef.current = crypto.randomUUID();
+          registerGameStart(clientGameIdRef.current);
           setPhase("playing");
           setIsGenerating(false);
           if (checkWin(revealed)) setPhase("won");
@@ -219,6 +230,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random", 
       }
       workingBoard = generateBoard(row, col, boardConfig);
       clientGameIdRef.current = crypto.randomUUID();
+      registerGameStart(clientGameIdRef.current);
       setPhase("playing");
     }
 
