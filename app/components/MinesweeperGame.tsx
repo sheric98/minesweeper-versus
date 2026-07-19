@@ -20,7 +20,7 @@ import {
 import { decodeBoard } from "@/app/lib/multiplayer-utils";
 import { useBoardInput } from "@/app/lib/useBoardInput";
 import { useControls } from "@/app/components/ControlsProvider";
-import { SUNKEN_INNER } from "@/app/lib/win95";
+import { RAISED_OUTER, SUNKEN_INNER } from "@/app/lib/win95";
 import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import HowToPlayHint from "@/app/components/HowToPlayHint";
@@ -48,9 +48,11 @@ interface MinesweeperGameProps {
   authLevel?: "anonymous" | "google";
   username?: string;
   mode?: GameMode;
+  windowTitle?: string;
+  subtitle?: string;
 }
 
-export default function MinesweeperGame({ authLevel, username, mode = "random" }: MinesweeperGameProps) {
+export default function MinesweeperGame({ authLevel, username, mode = "random", windowTitle, subtitle }: MinesweeperGameProps) {
   const { controls } = useControls();
 
   const [board, setBoard] = useState<Board>(() => createEmptyBoard());
@@ -322,6 +324,15 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
       } as CSSProperties}
     >
       <div className="flex flex-col items-center gap-0">
+        <div className={windowTitle ? `${RAISED_OUTER} bg-[#c0c0c0] p-1 flex flex-col` : "flex flex-col"}>
+        {windowTitle && (
+          <div className="bg-[#000080] text-white text-sm font-bold px-2 py-1 select-none mb-1">
+            {windowTitle}
+          </div>
+        )}
+        {subtitle && (
+          <div className="text-xs text-center px-2 pb-1 max-w-md">{subtitle}</div>
+        )}
         {mode === "no-guess" && (
           <SelectorTabs options={NO_GUESS_OPTIONS} value={difficulty} onChange={handleDifficultyChange} />
         )}
@@ -365,6 +376,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
             )}
           </div>
         )}
+        </div>
         <HowToPlayHint />
       </div>
       {showLeaderboard && (

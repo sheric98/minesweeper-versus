@@ -18,8 +18,14 @@ export default async function NoGuess() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-[#c0c0c0]">
-      <MinesweeperGame mode="no-guess" authLevel={authLevel} username={username} />
+    <main className="flex flex-1 flex-col items-center justify-center bg-[#c0c0c0] py-6">
+      <MinesweeperGame
+        mode="no-guess"
+        authLevel={authLevel}
+        username={username}
+        windowTitle="Minesweeper — No Guess"
+        subtitle="Every board is solvable by pure logic — no 50/50 guesses. Difficulty sets how deep the deductions go; the board is always 30×16."
+      />
     </main>
   );
 }

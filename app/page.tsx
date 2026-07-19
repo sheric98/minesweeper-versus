@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import MinesweeperGame from "@/app/components/MinesweeperGame";
 
 export default async function Home() {
@@ -18,8 +19,14 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-[#c0c0c0]">
-      <MinesweeperGame mode="random" authLevel={authLevel} username={username} />
+    <main className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#c0c0c0] py-6">
+      <MinesweeperGame mode="random" authLevel={authLevel} username={username} windowTitle="Minesweeper" />
+      <p className="text-sm select-none">
+        Race a friend in real time →{" "}
+        <Link href="/multiplayer" className="font-bold underline">
+          Multiplayer
+        </Link>
+      </p>
     </main>
   );
 }
