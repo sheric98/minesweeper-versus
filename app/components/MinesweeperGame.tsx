@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef, type CSSProperties } from "re
 import { usePathname } from "next/navigation";
 import {
   Board,
+  BOARD_PRESETS,
+  type BoardSizePreset,
   GamePhase,
-  MINE_COUNT,
   type NoGuessDifficulty,
   createEmptyBoard,
   generateBoard,
@@ -30,6 +31,12 @@ import * as PendingScore from "@/app/lib/pending-score";
 
 type GameMode = "random" | "no-guess";
 
+const SIZE_OPTIONS: { value: BoardSizePreset; label: string }[] = [
+  { value: "beginner", label: "Beginner 9×9" },
+  { value: "intermediate", label: "Intermediate 16×16" },
+  { value: "expert", label: "Expert 30×16" },
+];
+
 const NO_GUESS_OPTIONS: { value: NoGuessDifficulty; label: string }[] = [
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
@@ -53,6 +60,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const [scores, setScores] = useState<LeaderboardEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [difficulty, setDifficulty] = useState<NoGuessDifficulty>("beginner");
+  const [sizePreset, setSizePreset] = useState<BoardSizePreset>("expert");
   const [showSignInModal, setShowSignInModal] = useState(false);
   const pathname = usePathname();
   const clientGameIdRef = useRef<string | null>(null);
@@ -60,7 +68,12 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   const signInModalDismissedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const showLeaderboard = mode === "random" || mode === "no-guess";
+  // Random mode plays any preset; no-guess boards are always expert-sized
+  // (solver difficulty tabs vary logic depth, not size).
+  const boardConfig = mode === "no-guess" ? BOARD_PRESETS.expert : BOARD_PRESETS[sizePreset];
+
+  // Leaderboard times are only comparable on the expert board.
+  const showLeaderboard = mode === "no-guess" || sizePreset === "expert";
 
   // Submit completed game (win OR loss) on terminal phase, for Google-auth users.
   useEffect(() => {
@@ -202,7 +215,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
         }, 500);
         return;
       }
-      workingBoard = generateBoard(row, col);
+      workingBoard = generateBoard(row, col, boardConfig);
       clientGameIdRef.current = crypto.randomUUID();
       setPhase("playing");
     }
@@ -216,7 +229,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     const nextBoard = revealCell(workingBoard, row, col);
     setBoard(nextBoard);
     if (checkWin(nextBoard)) setPhase("won");
-  }, [board, phase, isGenerating, mode, difficulty]);
+  }, [board, phase, isGenerating, mode, difficulty, boardConfig]);
 
   const handleFlag = useCallback((row: number, col: number) => {
     if (phase !== "playing") return;
@@ -248,13 +261,32 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
   });
 
   const handleReset = useCallback(() => {
-    setBoard(createEmptyBoard());
+    setBoard(createEmptyBoard(boardConfig));
     setPhase("idle");
     setElapsedSeconds(0);
     clientGameIdRef.current = null;
     submittedRef.current = false;
     signInModalDismissedRef.current = false;
     setShowSignInModal(false);
+  }, [boardConfig]);
+
+  const handleSizeChange = useCallback((p: BoardSizePreset) => {
+    setSizePreset(p);
+    setBoard(createEmptyBoard(BOARD_PRESETS[p]));
+    setPhase("idle");
+    setElapsedSeconds(0);
+    clientGameIdRef.current = null;
+    submittedRef.current = false;
+    signInModalDismissedRef.current = false;
+    setShowSignInModal(false);
+  }, []);
+
+  // Casual touch-device visitors get the small board by default (30 cols is untappable on phones).
+  useEffect(() => {
+    if (mode !== "random") return;
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    Promise.resolve().then(() => handleSizeChange("beginner"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDifficultyChange = useCallback((d: NoGuessDifficulty) => {
@@ -268,19 +300,22 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setShowSignInModal(false);
   }, []);
 
-  const flagsRemaining = MINE_COUNT - countFlags(board);
+  const flagsRemaining = boardConfig.mines - countFlags(board);
 
   return (
     <div
       className="flex flex-col xl:flex-row items-center xl:items-start gap-4 select-none"
       style={{
-        "--cell-size": "clamp(0.625rem, calc((100vw - 2rem) / 30), 1.75rem)",
-        "--board-width": "calc(30 * var(--cell-size) + 8px)",
+        "--cell-size": `clamp(0.625rem, calc((100vw - 2rem) / ${boardConfig.cols}), 1.75rem)`,
+        "--board-width": `calc(${boardConfig.cols} * var(--cell-size) + 8px)`,
       } as CSSProperties}
     >
       <div className="flex flex-col items-center gap-0">
         {mode === "no-guess" && (
           <SelectorTabs options={NO_GUESS_OPTIONS} value={difficulty} onChange={handleDifficultyChange} />
+        )}
+        {mode === "random" && (
+          <SelectorTabs options={SIZE_OPTIONS} value={sizePreset} onChange={handleSizeChange} />
         )}
         <Header
           flagsRemaining={flagsRemaining}
