@@ -1,6 +1,5 @@
-import { ROWS, COLS, MINE_COUNT, Board, createEmptyBoard } from "./minesweeper";
+import { ROWS, COLS, MINE_COUNT, Board, createEmptyBoard, type NoGuessDifficulty } from "./minesweeper";
 import { cellKey, type Cell, type SolverBoard, Solver, PerfectSolver, ProbabilisticSolver, BasicSolver, SubsetSolver } from "./solver";
-import type { NoGuessDifficulty } from "@/app/components/DifficultySelector";
 
 function generateRandomBoard(startRow: number, startCol: number): SolverBoard[][] {
   // Build safe zone around starting square (the cell + all 8 neighbors)

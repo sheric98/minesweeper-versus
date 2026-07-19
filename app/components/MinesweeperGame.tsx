@@ -6,6 +6,7 @@ import {
   Board,
   GamePhase,
   MINE_COUNT,
+  type NoGuessDifficulty,
   createEmptyBoard,
   generateBoard,
   revealCell,
@@ -23,11 +24,18 @@ import Header from "@/app/components/Header";
 import BoardComponent from "@/app/components/Board";
 import HowToPlayHint from "@/app/components/HowToPlayHint";
 import Leaderboard, { type LeaderboardEntry } from "@/app/components/Leaderboard";
-import DifficultySelector, { type NoGuessDifficulty } from "@/app/components/DifficultySelector";
+import SelectorTabs from "@/app/components/SelectorTabs";
 import PostWinSignInModal from "@/app/components/PostWinSignInModal";
 import * as PendingScore from "@/app/lib/pending-score";
 
 type GameMode = "random" | "no-guess";
+
+const NO_GUESS_OPTIONS: { value: NoGuessDifficulty; label: string }[] = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+  { value: "expert", label: "Expert" },
+];
 
 interface MinesweeperGameProps {
   authLevel?: "anonymous" | "google";
@@ -272,10 +280,7 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     >
       <div className="flex flex-col items-center gap-0">
         {mode === "no-guess" && (
-          <DifficultySelector
-            difficulty={difficulty}
-            onDifficultyChange={handleDifficultyChange}
-          />
+          <SelectorTabs options={NO_GUESS_OPTIONS} value={difficulty} onChange={handleDifficultyChange} />
         )}
         <Header
           flagsRemaining={flagsRemaining}

@@ -1,5 +1,5 @@
 import { generateSolvableBoard } from "./board-generator";
-import type { NoGuessDifficulty } from "@/app/components/DifficultySelector";
+import type { NoGuessDifficulty } from "./minesweeper";
 
 export interface BoardWorkerRequest {
   startRow: number;

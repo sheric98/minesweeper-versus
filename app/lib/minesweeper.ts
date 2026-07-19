@@ -6,6 +6,9 @@ export interface BoardConfig {
 
 export type BoardSizePreset = "beginner" | "intermediate" | "expert";
 
+// Solver-depth tiers for no-guess mode (board size is always expert).
+export type NoGuessDifficulty = "beginner" | "intermediate" | "advanced" | "expert";
+
 export const BOARD_PRESETS: Record<BoardSizePreset, BoardConfig> = {
   beginner: { rows: 9, cols: 9, mines: 10 },
   intermediate: { rows: 16, cols: 16, mines: 40 },
