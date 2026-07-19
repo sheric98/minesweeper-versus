@@ -50,6 +50,7 @@ export default function HowToPlayHint() {
     "Right-click flags",
     CHORD_HINTS[controls.chordTrigger],
     SPACEBAR_HINTS[controls.spacebarAction],
+    "🙂 or F2 starts a new game",
   ].filter((h): h is string => h !== null);
 
   return (

@@ -281,6 +281,17 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
     setShowSignInModal(false);
   }, []);
 
+  // Classic Windows Minesweeper shortcut: F2 starts a new game.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "F2") return;
+      e.preventDefault();
+      handleReset();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleReset]);
+
   // Casual touch-device visitors get the small board by default (30 cols is untappable on phones).
   useEffect(() => {
     if (mode !== "random") return;
@@ -349,7 +360,9 @@ export default function MinesweeperGame({ authLevel, username, mode = "random" }
                 )}
               </>
             )}
-            {!isGenerating && phase === "lost" && <span className="text-red-500">Game over.</span>}
+            {!isGenerating && phase === "lost" && (
+              <span className="text-red-500">Game over — click 🙂 to try again</span>
+            )}
           </div>
         )}
         <HowToPlayHint />
