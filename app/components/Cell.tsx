@@ -24,6 +24,9 @@ interface CellProps {
   onLeftClick: (row: number, col: number) => void;
   onRightClick: (e: React.MouseEvent, row: number, col: number) => void;
   onCellMouseEnter: (row: number, col: number) => void;
+  onTouchStart: (e: React.TouchEvent, row: number, col: number) => void;
+  onTouchEnd: (e: React.TouchEvent, row: number, col: number) => void;
+  onTouchMove: (e: React.TouchEvent) => void;
 }
 
 const CellComponent = React.memo(function Cell({
@@ -34,12 +37,20 @@ const CellComponent = React.memo(function Cell({
   onLeftClick,
   onRightClick,
   onCellMouseEnter,
+  onTouchStart,
+  onTouchEnd,
+  onTouchMove,
 }: CellProps) {
   const { state, adjacentMines } = cell;
 
   const handleClick = () => onLeftClick(row, col);
   const handleContextMenu = (e: React.MouseEvent) => onRightClick(e, row, col);
   const handleMouseEnter = () => onCellMouseEnter(row, col);
+  const touchProps = {
+    onTouchStart: (e: React.TouchEvent) => onTouchStart(e, row, col),
+    onTouchEnd: (e: React.TouchEvent) => onTouchEnd(e, row, col),
+    onTouchMove,
+  };
 
   const base = "flex items-center justify-center font-bold font-mono select-none box-border overflow-hidden";
   const sizeStyle: React.CSSProperties = {
@@ -56,6 +67,7 @@ const CellComponent = React.memo(function Cell({
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
+        {...touchProps}
       />
     );
   }
@@ -68,6 +80,7 @@ const CellComponent = React.memo(function Cell({
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
+        {...touchProps}
       >
         🚩
       </div>
@@ -82,6 +95,7 @@ const CellComponent = React.memo(function Cell({
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onMouseEnter={handleMouseEnter}
+        {...touchProps}
       >
         ?
       </div>
@@ -96,6 +110,7 @@ const CellComponent = React.memo(function Cell({
         className={`${base} ${SUNKEN} bg-[#e0e0e0] ${color}`}
         style={sizeStyle}
         onMouseEnter={handleMouseEnter}
+        {...touchProps}
       >
         {label}
       </div>

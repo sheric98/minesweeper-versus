@@ -50,6 +50,9 @@ export interface BoardInputHandlers {
     onCellLeftClick: (row: number, col: number) => void;
     onCellRightClick: (e: React.MouseEvent, row: number, col: number) => void;
     onCellMouseEnter: (row: number, col: number) => void;
+    onCellTouchStart: (e: React.TouchEvent, row: number, col: number) => void;
+    onCellTouchEnd: (e: React.TouchEvent, row: number, col: number) => void;
+    onCellTouchMove: (e: React.TouchEvent) => void;
   };
   sunkCells: Set<string>;
 }
@@ -89,6 +92,14 @@ export function useBoardInput({
   // hasn't yet flipped to "revealed" between click 1 and click 2, so without
   // this guard both clicks would fire onReveal on the same cell.
   const lastRevealRef = useRef<{ row: number; col: number; ts: number } | null>(null);
+
+  // Touch state: tap = reveal/chord, long-press = flag. Mouse handlers ignore
+  // events for 700ms after a touch so the browser's emulated click/contextmenu
+  // (fired after touchend / during long-press) can't double-act.
+  const touchStartRef = useRef<{ row: number; col: number; x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const lastTouchEndRef = useRef(0);
 
   const recomputeSunk = useCallback(() => {
     const showPreview = controlsRef.current.chordTrigger === "both-buttons";
@@ -142,7 +153,64 @@ export function useBoardInput({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCellTouchStart = useCallback((e: React.TouchEvent, row: number, col: number) => {
+    if (!enabledRef.current) return;
+    const t = e.touches[0];
+    touchStartRef.current = { row, col, x: t.clientX, y: t.clientY };
+    longPressFiredRef.current = false;
+    clearLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      const b = boardRef.current;
+      if (!b || !enabledRef.current) return;
+      const cell = b[row][col];
+      if (cell.state === "unrevealed" || cell.state === "flagged" || cell.state === "question") {
+        onFlagRef.current(row, col);
+        navigator.vibrate?.(50);
+      }
+    }, 350);
+  }, [clearLongPressTimer]);
+
+  const handleCellTouchMove = useCallback((e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - start.x) > 12 || Math.abs(t.clientY - start.y) > 12) {
+      // Finger is scrolling, not tapping — cancel.
+      touchStartRef.current = null;
+      clearLongPressTimer();
+    }
+  }, [clearLongPressTimer]);
+
+  const handleCellTouchEnd = useCallback((e: React.TouchEvent, row: number, col: number) => {
+    lastTouchEndRef.current = Date.now();
+    clearLongPressTimer();
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (e.cancelable) e.preventDefault(); // suppress emulated mouse events where possible
+    if (!start || longPressFiredRef.current) return;
+    if (start.row !== row || start.col !== col) return;
+    if (!enabledRef.current) return;
+    const b = boardRef.current;
+    if (!b) return;
+    const cell = b[row][col];
+    if (cell.state === "revealed") {
+      onChordRef.current(row, col);
+    } else if (cell.state === "unrevealed") {
+      onRevealRef.current(row, col);
+    }
+    // flagged/question: tap does nothing — unflag via long-press only.
+  }, [clearLongPressTimer]);
+
   const handleCellLeftClick = useCallback((row: number, col: number) => {
+    if (Date.now() - lastTouchEndRef.current < 700) return;
     if (!enabledRef.current) return;
     const b = boardRef.current;
     if (!b) return;
@@ -157,6 +225,7 @@ export function useBoardInput({
 
   const handleCellRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
+    if (touchStartRef.current || Date.now() - lastTouchEndRef.current < 700) return;
     if (!enabledRef.current) return;
     if (e.buttons & 1) return; // left-button held — chording, not flagging
     if (wasChordingRef.current) return; // chord just ended — suppress spurious flag
@@ -262,6 +331,9 @@ export function useBoardInput({
       onCellLeftClick: handleCellLeftClick,
       onCellRightClick: handleCellRightClick,
       onCellMouseEnter: handleCellMouseEnter,
+      onCellTouchStart: handleCellTouchStart,
+      onCellTouchEnd: handleCellTouchEnd,
+      onCellTouchMove: handleCellTouchMove,
     },
     sunkCells,
   };

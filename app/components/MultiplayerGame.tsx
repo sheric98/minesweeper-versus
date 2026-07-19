@@ -446,6 +446,9 @@ export default function MultiplayerGame({ matchId, playerName, authLevel }: Mult
               onCellLeftClick={cellHandlers.onCellLeftClick}
               onCellRightClick={cellHandlers.onCellRightClick}
               onCellMouseEnter={cellHandlers.onCellMouseEnter}
+              onCellTouchStart={cellHandlers.onCellTouchStart}
+              onCellTouchEnd={cellHandlers.onCellTouchEnd}
+              onCellTouchMove={cellHandlers.onCellTouchMove}
               onBoardMouseLeave={boardHandlers.onMouseLeave}
               onBoardMouseDown={boardHandlers.onMouseDown}
               onBoardMouseUp={boardHandlers.onMouseUp}

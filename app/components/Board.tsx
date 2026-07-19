@@ -12,13 +12,16 @@ interface BoardProps {
   onBoardMouseDown: (e: React.MouseEvent) => void;
   onBoardMouseUp: (e: React.MouseEvent) => void;
   onBoardDoubleClick?: (e: React.MouseEvent) => void;
+  onCellTouchStart: (e: React.TouchEvent, row: number, col: number) => void;
+  onCellTouchEnd: (e: React.TouchEvent, row: number, col: number) => void;
+  onCellTouchMove: (e: React.TouchEvent) => void;
 }
 
-export default function BoardComponent({ board, sunkCells, onCellLeftClick, onCellRightClick, onCellMouseEnter, onBoardMouseLeave, onBoardMouseDown, onBoardMouseUp, onBoardDoubleClick }: BoardProps) {
+export default function BoardComponent({ board, sunkCells, onCellLeftClick, onCellRightClick, onCellMouseEnter, onBoardMouseLeave, onBoardMouseDown, onBoardMouseUp, onBoardDoubleClick, onCellTouchStart, onCellTouchEnd, onCellTouchMove }: BoardProps) {
   return (
     <div
-      className="border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]"
-      style={{ display: "grid", gridTemplateColumns: `repeat(${board[0].length}, var(--cell-size))` }}
+      className="touch-manipulation border-4 border-t-[#a0a0a0] border-l-[#a0a0a0] border-b-[#d8d8d8] border-r-[#d8d8d8]"
+      style={{ display: "grid", gridTemplateColumns: `repeat(${board[0].length}, var(--cell-size))`, WebkitTouchCallout: "none" } as React.CSSProperties}
       onMouseLeave={onBoardMouseLeave}
       onContextMenu={e => e.preventDefault()}
       onMouseDown={onBoardMouseDown}
@@ -36,6 +39,9 @@ export default function BoardComponent({ board, sunkCells, onCellLeftClick, onCe
             onLeftClick={onCellLeftClick}
             onRightClick={onCellRightClick}
             onCellMouseEnter={onCellMouseEnter}
+            onTouchStart={onCellTouchStart}
+            onTouchEnd={onCellTouchEnd}
+            onTouchMove={onCellTouchMove}
           />
         ))
       )}
