@@ -22,7 +22,7 @@ export default function NavBar({ username, authLevel }: Props) {
   const pathname = usePathname();
 
   return (
-    <nav className="w-full bg-ms-silver border-b-2 border-ms-dark flex items-center gap-1 px-3 py-1">
+    <nav className="w-full bg-ms-silver border-b-2 border-ms-dark flex flex-wrap items-center gap-1 px-2 sm:px-3 py-1">
       {LINKS.map(({ href, label }) => {
         const active = pathname === href;
         return (
@@ -44,7 +44,7 @@ export default function NavBar({ username, authLevel }: Props) {
                     borderRight: "2px solid #808080",
                   }
             }
-            className="px-4 py-1 text-sm font-bold select-none bg-ms-silver hover:brightness-95"
+            className="px-2 sm:px-4 py-1 text-sm font-bold select-none bg-ms-silver hover:brightness-95"
           >
             {label}
           </Link>
