@@ -12,11 +12,11 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
-  title: "Minesweeper",
+  title: "Minesweeper — Solo, No-Guess & Multiplayer Races",
   description:
     "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
   openGraph: {
-    title: "Minesweeper",
+    title: "Minesweeper — Solo, No-Guess & Multiplayer Races",
     description:
       "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
     url: "/",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Minesweeper",
+    title: "Minesweeper — Solo, No-Guess & Multiplayer Races",
     description:
       "Classic Minesweeper — 30×16 board, 99 mines. Play solo, race friends in real-time multiplayer, and climb the leaderboards.",
   },
